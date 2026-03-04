@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: password
+    ports: ["5432:5432"]
+
+  cache:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  api:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    ports: ["3000:3000"]
+    volumes: ["./apps/api:/app/apps/api", "./packages/shared:/app/packages/shared"]
+
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+    ports: ["5173:5173"]
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes: ["./apps/web:/app/apps/web", "./packages/shared:/app/packages/shared"]
