@@ -9,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@project/shared": "workspace:*",
+    "posthog-js": "^1.360.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@project/shared": "workspace:*"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.10",
