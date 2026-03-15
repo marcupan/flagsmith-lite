@@ -127,7 +127,7 @@ jobs:
           done
 
       - name: Smoke test
-        run: pnpm smoke:health http://localhost:3000/health
+        run: node scripts/smoke-health.mjs http://localhost:3000/health
 
       - name: Cleanup
         if: always()
