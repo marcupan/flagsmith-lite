@@ -1,0 +1,86 @@
+{
+  "name": "Flag Campaign — Timed Launch",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Campaign Start (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "flag-campaign",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Enable Flag",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 300],
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://api:3000/flags/{{ $json.body.flagKey }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Api-Key", "value": "={{ $json.body.apiKey }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={ \"enabled\": true }"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Wait Campaign Duration",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [750, 300],
+      "parameters": {
+        "resume": "timeInterval",
+        "unit": "hours",
+        "amount": "={{ $('Campaign Start (Webhook)').item.json.body.durationHours ?? 24 }}"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Disable Flag",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1000, 300],
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://api:3000/flags/{{ $('Campaign Start (Webhook)').item.json.body.flagKey }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $('Campaign Start (Webhook)').item.json.body.apiKey }}"
+            },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={ \"enabled\": false }"
+      }
+    }
+  ],
+  "connections": {
+    "Campaign Start (Webhook)": {
+      "main": [[{ "node": "Enable Flag", "type": "main", "index": 0 }]]
+    },
+    "Enable Flag": {
+      "main": [[{ "node": "Wait Campaign Duration", "type": "main", "index": 0 }]]
+    },
+    "Wait Campaign Duration": {
+      "main": [[{ "node": "Disable Flag", "type": "main", "index": 0 }]]
+    }
+  }
+}

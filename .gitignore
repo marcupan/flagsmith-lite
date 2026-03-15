@@ -2,6 +2,13 @@
 
 node_modules
 
-dist/
+# Build output — in all packages
+**/dist/
+
+.DS_Store
+.env
+.env.dev
+.env.local
+.env.production
 
 docs/

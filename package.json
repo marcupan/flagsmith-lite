@@ -1,22 +1,32 @@
 {
   "name": "1-flagsmith-lite",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Feature flag service — Staff Engineer learning project",
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
-    "test": "pnpm -r test"
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,yml,yaml,md}\"",
+    "format:write": "prettier --write \"**/*.{ts,tsx,json,yml,yaml,md}\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "docs:check-links": "node scripts/check-docs-links.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "smoke:health": "node scripts/smoke-health.mjs",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm build && pnpm docs:check-links"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.30.3",
   "devDependencies": {
     "@types/node": "^25.3.3",
-    "eslint": "^10.0.2",
+    "eslint": "^9.28.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.2.0",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.34.1"
   }
 }

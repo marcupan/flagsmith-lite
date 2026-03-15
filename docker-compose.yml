@@ -5,7 +5,8 @@ services:
       POSTGRES_DB: flagr
       POSTGRES_USER: flagr
       POSTGRES_PASSWORD: password
-    ports: ["5432:5432"]
+    ports: ["${DB_PORT:-5433}:5432"]
+    networks: [app]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U flagr -d flagr"]
       interval: 5s
@@ -14,7 +15,8 @@ services:
 
   cache:
     image: redis:7
-    ports: ["6379:6379"]
+    ports: ["${REDIS_PORT:-6379}:6379"]
+    networks: [app]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -25,26 +27,65 @@ services:
     build:
       context: .
       dockerfile: ./apps/api/Dockerfile
-    ports: ["3000:3000"]
+    ports: ["${API_PORT:-3000}:3000"]
+    networks: [app]
     environment:
+      - NODE_ENV=production
       - DATABASE_URL=postgres://flagr:password@db:5432/flagr
       - REDIS_URL=redis://cache:6379
       - CORS_ORIGIN=http://localhost:5173
+      - API_KEY=local-dev-key
     depends_on:
       db:
         condition: service_healthy
       cache:
         condition: service_healthy
-    volumes: ["./apps/api:/app/apps/api", "./packages/shared:/app/packages/shared"]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "fetch(''http://localhost:3000/health'').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   web:
     build:
       context: .
       dockerfile: ./apps/web/Dockerfile
     ports: ["5173:5173"]
+    networks: [app]
     environment:
-      # Browser fetches directly from host — use localhost, not service name
       - VITE_API_URL=http://localhost:3000
+      - VITE_API_KEY=local-dev-key
     depends_on:
-      - api
-    volumes: ["./apps/web:/app/apps/web", "./packages/shared:/app/packages/shared"]
+      api:
+        condition: service_healthy
+
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    networks: [app]
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-admin}
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  n8n_data:

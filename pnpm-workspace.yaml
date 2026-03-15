@@ -4,3 +4,7 @@ packages:
 
 ignoredBuiltDependencies:
   - esbuild
+
+onlyBuiltDependencies:
+  - core-js
+  - protobufjs
