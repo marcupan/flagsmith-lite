@@ -20,10 +20,6 @@ pnpm smoke:health
 - **Infra** — Postgres 16 + Redis 7 via Docker Compose with health checks.
 - **CI** — 3-job GitHub Actions pipeline: verify → integration tests → docker smoke.
 
-## Documentation
-
-Start here: [docs/staff-playbook/00-start-here.uk.md](docs/staff-playbook/00-start-here.uk.md)
-
 ## Scripts
 
 ```bash
