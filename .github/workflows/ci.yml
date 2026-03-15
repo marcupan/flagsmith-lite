@@ -95,6 +95,8 @@ jobs:
         env:
           COMPOSE_FILE: docker-compose.yml
           COMPOSE_PROJECT_NAME: flagsmith-lite
+          N8N_USER: ci-placeholder
+          N8N_PASSWORD: ci-placeholder
 
       - name: Wait for Postgres
         run: |
@@ -102,6 +104,9 @@ jobs:
             docker compose exec -T db pg_isready -U flagr && break
             sleep 2
           done
+        env:
+          N8N_USER: ci-placeholder
+          N8N_PASSWORD: ci-placeholder
 
       - name: Start API container
         run: |
@@ -129,3 +134,5 @@ jobs:
         run: docker compose down -v && docker rm -f flagr-api-smoke || true
         env:
           COMPOSE_PROJECT_NAME: flagsmith-lite
+          N8N_USER: ci-placeholder
+          N8N_PASSWORD: ci-placeholder

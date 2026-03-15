@@ -20,6 +20,7 @@ const authPluginFn: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts
       typeof provided === "string" &&
       (() => {
         const buf = Buffer.from(provided);
+
         return buf.length === expected.length && timingSafeEqual(buf, expected);
       })();
 
