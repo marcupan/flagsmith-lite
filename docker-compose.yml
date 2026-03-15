@@ -30,11 +30,11 @@ services:
     ports: ["${API_PORT:-3000}:3000"]
     networks: [app]
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgres://flagr:password@db:5432/flagr
-      - REDIS_URL=redis://cache:6379
-      - CORS_ORIGIN=http://localhost:5173
-      - API_KEY=local-dev-key
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL:-postgres://flagr:password@db:5432/flagr}
+      - REDIS_URL=${REDIS_URL:-redis://cache:6379}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      - API_KEY=${API_KEY:-local-dev-key}
     depends_on:
       db:
         condition: service_healthy
@@ -67,15 +67,17 @@ services:
   n8n:
     image: n8nio/n8n:latest
     ports:
-      - "5678:5678"
+      # Bind to loopback only — n8n has code execution; never expose to 0.0.0.0
+      - "127.0.0.1:5678:5678"
     networks: [app]
     volumes:
       - n8n_data:/home/node/.n8n
       - ./workflows:/workflows
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-admin}
+      # N8N_USER and N8N_PASSWORD must be set in .env — no insecure defaults
+      - N8N_BASIC_AUTH_USER=${N8N_USER:?N8N_USER must be set in .env}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:?N8N_PASSWORD must be set in .env}
       - N8N_HOST=localhost
       - N8N_PORT=5678
       - WEBHOOK_URL=http://localhost:5678/

@@ -21,6 +21,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 
+# pnpm workspace config needed so `pnpm --filter @project/api <script>` resolves
+COPY pnpm-workspace.yaml package.json ./
+# tsconfig.base.json referenced by apps/api/tsconfig.json via "extends: ../../tsconfig.base.json"
+COPY tsconfig.base.json ./
+
 # Copy source (tsx runs TypeScript directly; a compiled-JS stage is the next
 # improvement — see docs/staff-playbook/10-repo-improvements.uk.md)
 COPY packages/shared ./packages/shared
@@ -28,9 +33,14 @@ COPY apps/api/src ./apps/api/src
 COPY apps/api/drizzle ./apps/api/drizzle
 COPY apps/api/migrate.ts ./apps/api/migrate.ts
 COPY apps/api/package.json ./apps/api/package.json
+COPY apps/api/tsconfig.json ./apps/api/
 
 ENV NODE_ENV=production
 EXPOSE 3000
+
+# Run as non-root to limit blast radius if the process is compromised
+RUN chown -R node:node /app
+USER node
 
 # Run migrations before starting the server, with retry for transient DNS/network
 # failures that can occur on container startup (e.g., EAI_AGAIN on macOS Docker Desktop).

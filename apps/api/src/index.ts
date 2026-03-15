@@ -25,20 +25,28 @@ export interface BuildServerOptions {
 export async function buildServer(opts: BuildServerOptions) {
   const server = fastify({
     logger: { level: isProd ? "info" : "debug" },
-    genReqId: (req) => (req.headers["x-request-id"] as string | undefined) ?? randomUUID(),
+    // Accept caller-supplied ID only if it looks like a safe identifier (UUID or
+    // alphanumeric slug ≤ 64 chars). Arbitrary values are rejected to prevent log
+    // injection — newlines or ANSI codes in IDs can forge entries in aggregators.
+    genReqId: (req) => {
+      const id = req.headers["x-request-id"];
+      if (typeof id === "string" && /^[\w-]{1,64}$/.test(id)) return id;
+      return randomUUID();
+    },
   });
 
   server.addHook("onSend", async (request, reply) => {
     void reply.header("x-request-id", request.id);
   });
 
-  await server.register(cors, {
-    origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
-  });
+  const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
+  if (corsOrigin === "*") throw new Error("CORS_ORIGIN=* is not permitted — set a specific origin");
+  await server.register(cors, { origin: corsOrigin });
 
-  await server.register(helmet, {
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  });
+  // crossOriginResourcePolicy defaults to "same-origin" (secure).
+  // The CORS plugin already adds Access-Control-Allow-Origin for allowed origins;
+  // there is no need to weaken CORP to "cross-origin" for a JSON API.
+  await server.register(helmet);
 
   if (opts.rateLimit !== false) {
     await server.register(rateLimit, {
@@ -95,6 +103,11 @@ async function start() {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
     throw new Error('Required env var "API_KEY" is not set');
+  }
+  if (isProd && apiKey === "change-me-in-production") {
+    throw new Error(
+      "API_KEY must be changed from the default example value before running in production",
+    );
   }
 
   const redisUrl = process.env.REDIS_URL;
