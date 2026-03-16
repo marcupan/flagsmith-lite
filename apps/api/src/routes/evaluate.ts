@@ -50,7 +50,10 @@ export const evaluateRoutes: FastifyPluginAsync = async (fastify) => {
       const row = await fastify.db.query.flags.findFirst({
         where: eq(flags.key, key),
       });
-      if (!row) throw flagNotFound(key);
+
+      if (!row) {
+        throw flagNotFound(key);
+      }
 
       // Populate cache for next request
       if (fastify.cache) {
