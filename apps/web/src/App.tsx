@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SubmitEventHandler } from "react";
 import type { CreateFlagBody, Flag } from "@project/shared";
 import { createFlag, deleteFlag, listFlags, updateFlag } from "./api";
 
@@ -36,7 +36,10 @@ export default function App() {
   };
 
   const handleDelete = async (key: string) => {
-    if (!confirm(`Delete flag "${key}"?`)) return;
+    if (!confirm(`Delete flag "${key}"?`)) {
+      return;
+    }
+
     try {
       await deleteFlag(key);
       setFlags((prev) => prev.filter((f) => f.key !== key));
@@ -240,7 +243,7 @@ function CreateFlagForm({
   const nameRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     const body: CreateFlagBody = {
       key: keyRef.current!.value.trim(),
