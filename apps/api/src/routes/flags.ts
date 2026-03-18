@@ -75,7 +75,10 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
       const existing = await fastify.db.query.flags.findFirst({
         where: eq(flags.key, request.body.key),
       });
-      if (existing) throw flagKeyExists(request.body.key);
+
+      if (existing) {
+        throw flagKeyExists(request.body.key);
+      }
 
       const [row] = await fastify.db
         .insert(flags)
@@ -96,7 +99,10 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
     const row = await fastify.db.query.flags.findFirst({
       where: eq(flags.key, request.params.key),
     });
-    if (!row) throw flagNotFound(request.params.key);
+
+    if (!row) {
+      throw flagNotFound(request.params.key);
+    }
 
     return toFlagResponse(row);
   });
@@ -109,14 +115,26 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
       const existing = await fastify.db.query.flags.findFirst({
         where: eq(flags.key, request.params.key),
       });
-      if (!existing) throw flagNotFound(request.params.key);
+
+      if (!existing) {
+        throw flagNotFound(request.params.key);
+      }
 
       const updates: Partial<typeof flags.$inferInsert> = {
         updatedAt: new Date(),
       };
-      if (request.body.name !== undefined) updates.name = request.body.name;
-      if (request.body.enabled !== undefined) updates.enabled = request.body.enabled;
-      if (request.body.description !== undefined) updates.description = request.body.description;
+
+      if (request.body.name !== undefined) {
+        updates.name = request.body.name;
+      }
+
+      if (request.body.enabled !== undefined) {
+        updates.enabled = request.body.enabled;
+      }
+
+      if (request.body.description !== undefined) {
+        updates.description = request.body.description;
+      }
 
       const [row] = await fastify.db
         .update(flags)
@@ -144,7 +162,9 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
         .where(eq(flags.key, request.params.key))
         .returning();
 
-      if (!deleted) throw flagNotFound(request.params.key);
+      if (!deleted) {
+        throw flagNotFound(request.params.key);
+      }
 
       // Invalidate cache after deletion
       if (fastify.cache) {
