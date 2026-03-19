@@ -30,7 +30,11 @@ export async function buildServer(opts: BuildServerOptions) {
     // injection — newlines or ANSI codes in IDs can forge entries in aggregators.
     genReqId: (req) => {
       const id = req.headers["x-request-id"];
-      if (typeof id === "string" && /^[\w-]{1,64}$/.test(id)) return id;
+
+      if (typeof id === "string" && /^[\w-]{1,64}$/.test(id)) {
+        return id;
+      }
+
       return randomUUID();
     },
   });
@@ -40,7 +44,11 @@ export async function buildServer(opts: BuildServerOptions) {
   });
 
   const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
-  if (corsOrigin === "*") throw new Error("CORS_ORIGIN=* is not permitted — set a specific origin");
+
+  if (corsOrigin === "*") {
+    throw new Error("CORS_ORIGIN=* is not permitted — set a specific origin");
+  }
+
   await server.register(cors, { origin: corsOrigin });
 
   // crossOriginResourcePolicy defaults to "same-origin" (secure).
