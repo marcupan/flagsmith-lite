@@ -5,6 +5,7 @@ import type { CreateFlagBody, EvaluateResponse, Flag, UpdateFlagBody } from "@pr
 const analyticsEnabled = !!import.meta.env.VITE_POSTHOG_KEY;
 
 const base = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const api = `${base}/api/v1`;
 const apiKey = import.meta.env.VITE_API_KEY || "";
 
 const headers = (): Record<string, string> => ({
@@ -22,13 +23,13 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function listFlags(): Promise<Flag[]> {
-  const res = await fetch(`${base}/flags`, { headers: headers() });
+  const res = await fetch(`${api}/flags`, { headers: headers() });
 
   return handleResponse<Flag[]>(res);
 }
 
 export async function createFlag(body: CreateFlagBody): Promise<Flag> {
-  const res = await fetch(`${base}/flags`, {
+  const res = await fetch(`${api}/flags`, {
     method: "POST",
     headers: headers(),
     body: JSON.stringify(body),
@@ -38,7 +39,7 @@ export async function createFlag(body: CreateFlagBody): Promise<Flag> {
 }
 
 export async function updateFlag(key: string, body: UpdateFlagBody): Promise<Flag> {
-  const res = await fetch(`${base}/flags/${key}`, {
+  const res = await fetch(`${api}/flags/${key}`, {
     method: "PUT",
     headers: headers(),
     body: JSON.stringify(body),
@@ -54,7 +55,7 @@ export async function updateFlag(key: string, body: UpdateFlagBody): Promise<Fla
 }
 
 export async function deleteFlag(key: string): Promise<void> {
-  const res = await fetch(`${base}/flags/${key}`, {
+  const res = await fetch(`${api}/flags/${key}`, {
     method: "DELETE",
     headers: headers(),
   });
@@ -62,8 +63,9 @@ export async function deleteFlag(key: string): Promise<void> {
 }
 
 export async function evaluateFlag(key: string): Promise<EvaluateResponse> {
-  const res = await fetch(`${base}/evaluate/${key}`);
+  const res = await fetch(`${api}/evaluate/${key}`);
   const data = await handleResponse<EvaluateResponse>(res);
+
   // Track every flag evaluation: key, resolved value, and source (cache vs DB)
   if (analyticsEnabled) {
     posthog.capture("flag_evaluated", {

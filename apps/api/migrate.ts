@@ -7,7 +7,10 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const url = process.env.DATABASE_URL;
-if (!url) throw new Error('Required env var "DATABASE_URL" is not set');
+
+if (!url) {
+  throw new Error('Required env var "DATABASE_URL" is not set');
+}
 
 // SSL matrix:
 //   *.railway.internal  — private network, no SSL needed  → false

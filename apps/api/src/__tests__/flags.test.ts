@@ -18,11 +18,11 @@ beforeEach(async () => {
   await db.delete(flags);
 });
 
-describe("GET /flags", () => {
+describe("GET /api/v1/flags", () => {
   it("returns empty array when no flags exist", async () => {
     const res = await server.inject({
       method: "GET",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
     });
     expect(res.statusCode).toBe(200);
@@ -30,17 +30,17 @@ describe("GET /flags", () => {
   });
 
   it("returns 401 without API key", async () => {
-    const res = await server.inject({ method: "GET", url: "/flags" });
+    const res = await server.inject({ method: "GET", url: "/api/v1/flags" });
     expect(res.statusCode).toBe(401);
     expect(res.json().code).toBe("UNAUTHORIZED");
   });
 });
 
-describe("POST /flags", () => {
+describe("POST /api/v1/flags", () => {
   it("creates a flag and returns 201", async () => {
     const res = await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "my-feature", name: "My Feature", enabled: false },
     });
@@ -55,13 +55,13 @@ describe("POST /flags", () => {
     const payload = { key: "dupe-key", name: "Dupe" };
     await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload,
     });
     const res = await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload,
     });
@@ -72,7 +72,7 @@ describe("POST /flags", () => {
   it("returns 400 for invalid key format", async () => {
     const res = await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "UPPERCASE_NOT_ALLOWED", name: "Bad" },
     });
@@ -80,11 +80,11 @@ describe("POST /flags", () => {
   });
 });
 
-describe("GET /flags/:key", () => {
+describe("GET /api/v1/flags/:key", () => {
   it("returns 404 for missing flag", async () => {
     const res = await server.inject({
       method: "GET",
-      url: "/flags/nonexistent",
+      url: "/api/v1/flags/nonexistent",
       headers: authHeader,
     });
     expect(res.statusCode).toBe(404);
@@ -94,13 +94,13 @@ describe("GET /flags/:key", () => {
   it("returns the flag when it exists", async () => {
     await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "test-flag", name: "Test", enabled: true },
     });
     const res = await server.inject({
       method: "GET",
-      url: "/flags/test-flag",
+      url: "/api/v1/flags/test-flag",
       headers: authHeader,
     });
     expect(res.statusCode).toBe(200);
@@ -108,17 +108,17 @@ describe("GET /flags/:key", () => {
   });
 });
 
-describe("PUT /flags/:key", () => {
+describe("PUT /api/v1/flags/:key", () => {
   it("updates a flag", async () => {
     await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "toggle-me", name: "Toggle Me", enabled: false },
     });
     const res = await server.inject({
       method: "PUT",
-      url: "/flags/toggle-me",
+      url: "/api/v1/flags/toggle-me",
       headers: authHeader,
       payload: { enabled: true },
     });
@@ -127,17 +127,17 @@ describe("PUT /flags/:key", () => {
   });
 });
 
-describe("DELETE /flags/:key", () => {
+describe("DELETE /api/v1/flags/:key", () => {
   it("deletes an existing flag", async () => {
     await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "to-delete", name: "Delete Me" },
     });
     const res = await server.inject({
       method: "DELETE",
-      url: "/flags/to-delete",
+      url: "/api/v1/flags/to-delete",
       headers: authHeader,
     });
     expect(res.statusCode).toBe(200);
@@ -147,7 +147,7 @@ describe("DELETE /flags/:key", () => {
   it("returns 404 when deleting nonexistent flag", async () => {
     const res = await server.inject({
       method: "DELETE",
-      url: "/flags/ghost",
+      url: "/api/v1/flags/ghost",
       headers: authHeader,
     });
     expect(res.statusCode).toBe(404);

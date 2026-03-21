@@ -89,15 +89,23 @@ export async function buildServer(opts: BuildServerOptions) {
     });
   });
 
-  // Public routes — no auth required
+  // Health check — unversioned (infrastructure, not business API)
   await server.register(healthRoute);
-  await server.register(evaluateRoutes, { prefix: "/evaluate" });
 
-  // Protected routes — require API key
-  await server.register(async (scope) => {
-    await scope.register(authPlugin, { apiKey: opts.apiKey });
-    await scope.register(flagsRoutes, { prefix: "/flags" });
-  });
+  // API v1 — all business routes under /api/v1/
+  await server.register(
+    async (v1) => {
+      // Public routes — no auth required
+      await v1.register(evaluateRoutes, { prefix: "/evaluate" });
+
+      // Protected routes — require an API key
+      await v1.register(async (authed) => {
+        await authed.register(authPlugin, { apiKey: opts.apiKey });
+        await authed.register(flagsRoutes, { prefix: "/flags" });
+      });
+    },
+    { prefix: "/api/v1" },
+  );
 
   return server;
 }
@@ -112,6 +120,7 @@ async function start() {
   if (!apiKey) {
     throw new Error('Required env var "API_KEY" is not set');
   }
+
   if (isProd && apiKey === "change-me-in-production") {
     throw new Error(
       "API_KEY must be changed from the default example value before running in production",

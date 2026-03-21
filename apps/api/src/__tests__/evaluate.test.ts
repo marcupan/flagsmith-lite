@@ -4,7 +4,7 @@ import { createDb } from "../db.js";
 import { flags } from "../schema.js";
 
 const db = createDb(process.env.DATABASE_URL!);
-// Tests run without cache to validate DB fallback path
+// Tests run without cache to validate a DB fallback path
 let server: Awaited<ReturnType<typeof buildServer>>;
 const authHeader = { "x-api-key": "test-api-key" };
 
@@ -18,11 +18,11 @@ beforeEach(async () => {
   await db.delete(flags);
 });
 
-describe("GET /evaluate/:key", () => {
+describe("GET /api/v1/evaluate/:key", () => {
   it("returns 404 for unknown flag", async () => {
     const res = await server.inject({
       method: "GET",
-      url: "/evaluate/unknown-flag",
+      url: "/api/v1/evaluate/unknown-flag",
     });
     expect(res.statusCode).toBe(404);
     expect(res.json().code).toBe("FLAG_NOT_FOUND");
@@ -31,13 +31,13 @@ describe("GET /evaluate/:key", () => {
   it("returns enabled=false for a disabled flag", async () => {
     await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "beta", name: "Beta", enabled: false },
     });
     const res = await server.inject({
       method: "GET",
-      url: "/evaluate/beta",
+      url: "/api/v1/evaluate/beta",
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(false);
@@ -47,11 +47,11 @@ describe("GET /evaluate/:key", () => {
   it("returns enabled=true for an enabled flag", async () => {
     await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "live", name: "Live", enabled: true },
     });
-    const res = await server.inject({ method: "GET", url: "/evaluate/live" });
+    const res = await server.inject({ method: "GET", url: "/api/v1/evaluate/live" });
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(true);
   });
@@ -59,13 +59,13 @@ describe("GET /evaluate/:key", () => {
   it("is accessible without API key (public endpoint)", async () => {
     await server.inject({
       method: "POST",
-      url: "/flags",
+      url: "/api/v1/flags",
       headers: authHeader,
       payload: { key: "public-check", name: "Public" },
     });
     const res = await server.inject({
       method: "GET",
-      url: "/evaluate/public-check",
+      url: "/api/v1/evaluate/public-check",
       // No auth header
     });
     expect(res.statusCode).toBe(200);

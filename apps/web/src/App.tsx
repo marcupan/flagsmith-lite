@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type SubmitEventHandler } from "react";
-import type { CreateFlagBody, Flag } from "@project/shared";
-import { createFlag, deleteFlag, listFlags, updateFlag } from "./api";
+import {useCallback, useEffect, useRef, useState, type SubmitEventHandler} from "react";
+import type {CreateFlagBody, Flag} from "@project/shared";
+import {createFlag, deleteFlag, listFlags, updateFlag} from "./api";
 
 type Status = "idle" | "loading" | "error";
 
@@ -13,6 +13,7 @@ export default function App() {
   const load = useCallback(async () => {
     setStatus("loading");
     setError(null);
+
     try {
       setFlags(await listFlags());
       setStatus("idle");
@@ -28,7 +29,8 @@ export default function App() {
 
   const handleToggle = async (flag: Flag) => {
     try {
-      const updated = await updateFlag(flag.key, { enabled: !flag.enabled });
+      const updated = await updateFlag(flag.key, {enabled: !flag.enabled});
+
       setFlags((prev) => prev.map((f) => (f.key === flag.key ? updated : f)));
     } catch (err) {
       setError((err as Error).message);
@@ -42,6 +44,7 @@ export default function App() {
 
     try {
       await deleteFlag(key);
+
       setFlags((prev) => prev.filter((f) => f.key !== key));
     } catch (err) {
       setError((err as Error).message);
@@ -64,7 +67,7 @@ export default function App() {
           marginBottom: "2rem",
         }}
       >
-        <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700 }}>Feature Flags</h1>
+        <h1 style={{margin: 0, fontSize: "1.5rem", fontWeight: 700}}>Feature Flags</h1>
         <p
           style={{
             margin: "0.25rem 0 0",
@@ -99,13 +102,12 @@ export default function App() {
           marginBottom: "1rem",
         }}
       >
-        <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+        <span style={{color: "#6b7280", fontSize: "0.875rem"}}>
           {status === "loading"
             ? "Loading\u2026"
             : `${flags.length} flag${flags.length !== 1 ? "s" : ""}`}
         </span>
         <button
-          onClick={() => setCreating(true)}
           style={{
             padding: "0.5rem 1rem",
             background: "#1d4ed8",
@@ -115,6 +117,7 @@ export default function App() {
             cursor: "pointer",
             fontWeight: 600,
           }}
+          onClick={() => setCreating(true)}
         >
           + New flag
         </button>
@@ -131,14 +134,14 @@ export default function App() {
       )}
 
       {status !== "loading" && flags.length === 0 && !creating && (
-        <p style={{ textAlign: "center", color: "#9ca3af", paddingTop: "3rem" }}>
+        <p style={{textAlign: "center", color: "#9ca3af", paddingTop: "3rem"}}>
           No flags yet. Create one above.
         </p>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <div style={{display: "flex", flexDirection: "column", gap: "0.75rem"}}>
         {flags.map((flag) => (
-          <FlagRow key={flag.key} flag={flag} onToggle={handleToggle} onDelete={handleDelete} />
+          <FlagRow key={flag.key} flag={flag} onToggle={handleToggle} onDelete={handleDelete}/>
         ))}
       </div>
     </div>
@@ -146,9 +149,9 @@ export default function App() {
 }
 
 function FlagRow({
-  flag,
-  onToggle,
-  onDelete,
+ flag,
+ onToggle,
+ onDelete,
 }: {
   flag: Flag;
   onToggle: (f: Flag) => void;
@@ -167,7 +170,6 @@ function FlagRow({
       }}
     >
       <button
-        onClick={() => onToggle(flag)}
         title={flag.enabled ? "Disable" : "Enable"}
         style={{
           width: 44,
@@ -181,9 +183,10 @@ function FlagRow({
         }}
         aria-checked={flag.enabled}
         role="switch"
+        onClick={() => onToggle(flag)}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{flag.name}</div>
+      <div style={{flex: 1, minWidth: 0}}>
+        <div style={{fontWeight: 600, fontSize: "0.875rem"}}>{flag.name}</div>
         <div
           style={{
             fontFamily: "monospace",
@@ -195,7 +198,7 @@ function FlagRow({
           {flag.key}
         </div>
         {flag.description && (
-          <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: 2 }}>
+          <div style={{fontSize: "0.75rem", color: "#9ca3af", marginTop: 2}}>
             {flag.description}
           </div>
         )}
@@ -213,7 +216,6 @@ function FlagRow({
         {flag.enabled ? "enabled" : "disabled"}
       </span>
       <button
-        onClick={() => onDelete(flag.key)}
         title="Delete flag"
         style={{
           background: "none",
@@ -223,6 +225,7 @@ function FlagRow({
           fontSize: "1rem",
           padding: 4,
         }}
+        onClick={() => onDelete(flag.key)}
       >
         ✕
       </button>
@@ -250,12 +253,16 @@ function CreateFlagForm({
       name: nameRef.current!.value.trim(),
       description: descRef.current!.value.trim() || undefined,
     };
+
     if (!body.key || !body.name) {
       setFormError("Key and name are required");
+
       return;
     }
+
     setSubmitting(true);
     setFormError(null);
+
     try {
       onCreated(await createFlag(body));
     } catch (err) {
@@ -275,7 +282,6 @@ function CreateFlagForm({
 
   return (
     <form
-      onSubmit={handleSubmit}
       style={{
         border: "1px dashed #93c5fd",
         borderRadius: 8,
@@ -283,10 +289,11 @@ function CreateFlagForm({
         marginBottom: "1rem",
         background: "#eff6ff",
       }}
+      onSubmit={handleSubmit}
     >
-      <h3 style={{ margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 700 }}>New Flag</h3>
+      <h3 style={{margin: "0 0 0.75rem", fontSize: "0.875rem", fontWeight: 700}}>New Flag</h3>
       {formError && (
-        <p style={{ color: "#dc2626", fontSize: "0.8rem", margin: "0 0 0.5rem" }}>{formError}</p>
+        <p style={{color: "#dc2626", fontSize: "0.8rem", margin: "0 0 0.5rem"}}>{formError}</p>
       )}
       <div
         style={{
@@ -296,15 +303,15 @@ function CreateFlagForm({
           marginBottom: "0.5rem",
         }}
       >
-        <input ref={keyRef} placeholder="key (e.g. dark-mode)" style={inputStyle} />
-        <input ref={nameRef} placeholder="Name" style={inputStyle} />
+        <input ref={keyRef} placeholder="key (e.g. dark-mode)" style={inputStyle}/>
+        <input ref={nameRef} placeholder="Name" style={inputStyle}/>
       </div>
       <input
         ref={descRef}
         placeholder="Description (optional)"
-        style={{ ...inputStyle, marginBottom: "0.75rem" }}
+        style={{...inputStyle, marginBottom: "0.75rem"}}
       />
-      <div style={{ display: "flex", gap: "0.5rem" }}>
+      <div style={{display: "flex", gap: "0.5rem"}}>
         <button
           type="submit"
           disabled={submitting}
@@ -322,7 +329,6 @@ function CreateFlagForm({
         </button>
         <button
           type="button"
-          onClick={onCancel}
           style={{
             padding: "0.5rem 1rem",
             background: "#fff",
@@ -330,6 +336,7 @@ function CreateFlagForm({
             borderRadius: 6,
             cursor: "pointer",
           }}
+          onClick={onCancel}
         >
           Cancel
         </button>

@@ -81,7 +81,7 @@ jobs:
           REDIS_URL: ""
           API_KEY: test-api-key
 
-  # ── Docker smoke: validate containerised runtime ────────────────────────
+  # ── Docker smoke: validate containerized runtime ────────────────────────
   docker-smoke:
     name: Docker smoke test
     runs-on: ubuntu-latest
