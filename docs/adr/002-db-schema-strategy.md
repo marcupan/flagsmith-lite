@@ -29,7 +29,7 @@ Same table but with `value JSONB` and `type TEXT` columns for storing arbitrary 
 Normalized schema with parent `flags` table and child `flag_values(flag_id, environment, enabled, value)`.
 
 - Pro: environment-ready from day one, clean separation of metadata and values
-- Con: every evaluate query requires a JOIN, schema over-engineered for single-environment boolean model
+- Con: every evaluated query requires a JOIN, schema over-engineered for single-environment boolean model
 
 ## Decision
 
