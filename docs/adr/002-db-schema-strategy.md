@@ -1,4 +1,4 @@
-# ADR-002: Стратегія Database Schema
+# ADR-002: Database Schema Strategy
 
 ## Status
 
@@ -6,45 +6,45 @@ Accepted
 
 ## Context
 
-flagsmith-lite зберігає feature flags. Початковий scope: boolean kill-switches. Майбутнє: typed values та environments. Postgres + Drizzle ORM для schema та migrations.
+flagsmith-lite stores feature flags. Initial scope: boolean kill-switches. Future: typed values and environments. Postgres + Drizzle ORM for schema and migrations.
 
 ## Options Considered
 
-### Option A: Одна таблиця `flags`, тільки boolean `enabled`
+### Option A: Single `flags` table, boolean `enabled` only
 
-Одна таблиця з `key`, `name`, `enabled`, `description`, timestamps. Без колонки value, без колонки environment. Flags або увімкнені, або ні.
+Single table with `key`, `name`, `enabled`, `description`, timestamps. No value column, no environment column. Flags are either on or off.
 
-- Перевага: найпростіша schema, нуль JOINs, evaluate — це single-row lookup (~0.1ms)
-- Недолік: без typed values, без environments — потребує migration для еволюції
+- Pro: simplest schema, zero JOINs, evaluate is a single-row lookup (~0.1ms)
+- Con: no typed values, no environments — requires migration to evolve
 
-### Option B: Одна таблиця `flags` з `value` як JSONB
+### Option B: Single `flags` table with `value` as JSONB
 
-Та сама таблиця, але з колонками `value JSONB` і `type TEXT` для зберігання довільних flag payloads.
+Same table but with `value JSONB` and `type TEXT` columns for storing arbitrary flag payloads.
 
-- Перевага: підтримує string/number/json flags з першого дня, все ще одна таблиця
-- Недолік: JSONB validation живе в application code, а не в DB constraints, додає складність до появи споживача non-boolean flags
+- Pro: supports string/number/json flags from day one, still a single table
+- Con: JSONB validation lives in application code, not DB constraints, adds complexity before any consumer of non-boolean flags exists
 
 ### Option C: `flags` + `flag_values` (one-to-many per environment)
 
-Нормалізована schema з батьківською таблицею `flags` і дочірньою `flag_values(flag_id, environment, enabled, value)`.
+Normalized schema with parent `flags` table and child `flag_values(flag_id, environment, enabled, value)`.
 
-- Перевага: готова до environments з першого дня, чисте розділення metadata і values
-- Недолік: кожен evaluate query потребує JOIN, schema надмірно спроектована для single-environment boolean моделі
+- Pro: environment-ready from day one, clean separation of metadata and values
+- Con: every evaluate query requires a JOIN, schema over-engineered for single-environment boolean model
 
 ## Decision
 
-Option A — boolean-only single table. Єдиний підтверджений споживач потребує on/off switches. Додавання JSONB або environments зараз додає складність з нульовою користю. Drizzle migrations роблять безпечною еволюцію schema, коли з'являться вимоги.
+Option A — boolean-only single table. The only confirmed consumer needs on/off switches. Adding JSONB or environments now adds complexity with zero benefit. Drizzle migrations make it safe to evolve the schema when requirements emerge.
 
 ## Consequences
 
-- Простіше: тривіальна schema, швидкі запити, просте cache invalidation (`flag:{key}` → `"1"` або `"0"`)
-- Складніше: додавання typed values потребує migration та зміни API contract
-- Шлях виходу: `ALTER TABLE flags ADD COLUMN value JSONB` + `ADD COLUMN type TEXT` — це non-breaking additive migration — існуючі boolean flags просто не використовують нові колонки
+- Simpler: trivial schema, fast queries, simple cache invalidation (`flag:{key}` → `"1"` or `"0"`)
+- Harder: adding typed values requires a migration and API contract change
+- Exit path: `ALTER TABLE flags ADD COLUMN value JSONB` + `ADD COLUMN type TEXT` — this is a non-breaking additive migration — existing boolean flags simply don't use the new columns
 
 Reference: `apps/api/src/schema.ts`, `apps/api/drizzle/0000_initial.sql`
 
 ```sql
--- Фактична початкова migration:
+-- Actual initial migration:
 CREATE TABLE IF NOT EXISTS "flags" (
   "id" serial PRIMARY KEY NOT NULL,
   "key" text NOT NULL,
