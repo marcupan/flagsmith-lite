@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { FastifyPluginAsync } from "fastify";
-import type { EvaluateResponse } from "@project/shared";
+import { FlagKey, Timestamp, type EvaluateResponse } from "@project/shared";
 import { flagNotFound } from "../errors.js";
 import { flags } from "../schema.js";
 import type { Db } from "../db.js";
@@ -25,19 +25,21 @@ export const evaluateRoutes: FastifyPluginAsync = async (fastify) => {
     },
     handler: async (request) => {
       const { key } = request.params;
+      // Validate + brand the key early — rejects malformed keys before DB hit
+      const flagKey = FlagKey(key);
 
       // Try Redis cache first
       if (fastify.cache) {
         try {
-          const cached = await fastify.cache.get(`flag:${key}`);
+          const cached = await fastify.cache.get(`flag:${flagKey}`);
 
           if (cached !== null) {
             return {
-              key,
+              key: flagKey,
               enabled: cached === "1",
-              evaluatedAt: new Date().toISOString(),
+              evaluatedAt: Timestamp(),
               source: "cache",
-            };
+            } satisfies EvaluateResponse;
           }
         } catch (err) {
           // Cache miss or Redis error: fall through to database
@@ -48,26 +50,26 @@ export const evaluateRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Database fallback (also used when cache is disabled)
       const row = await fastify.db.query.flags.findFirst({
-        where: eq(flags.key, key),
+        where: eq(flags.key, flagKey),
       });
 
       if (!row) {
-        throw flagNotFound(key);
+        throw flagNotFound(flagKey);
       }
 
       // Populate cache for next request
       if (fastify.cache) {
         await fastify.cache
-          .set(`flag:${key}`, row.enabled ? "1" : "0", "EX", CACHE_TTL_SECONDS)
+          .set(`flag:${flagKey}`, row.enabled ? "1" : "0", "EX", CACHE_TTL_SECONDS)
           .catch((err: Error) => request.log.warn({ err }, "Cache write failed"));
       }
 
       return {
-        key,
+        key: flagKey,
         enabled: row.enabled,
-        evaluatedAt: new Date().toISOString(),
+        evaluatedAt: Timestamp(),
         source: "database",
-      };
+      } satisfies EvaluateResponse;
     },
   });
 };

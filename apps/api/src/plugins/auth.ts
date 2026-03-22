@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
-import {timingSafeEqual} from "node:crypto";
-import type {FastifyPluginAsync} from "fastify";
+import { timingSafeEqual } from "node:crypto";
+import type { FastifyPluginAsync } from "fastify";
 
 export interface AuthPluginOptions {
   apiKey: string;
@@ -34,4 +34,4 @@ const authPluginFn: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts
   });
 };
 
-export const authPlugin = fp(authPluginFn, {name: "auth"});
+export const authPlugin = fp(authPluginFn, { name: "auth" });

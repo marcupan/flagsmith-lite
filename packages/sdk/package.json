@@ -1,15 +1,17 @@
 {
-  "name": "@project/shared",
+  "name": "@project/sdk",
   "version": "1.0.0",
   "type": "module",
-  "main": "index.ts",
-  "types": "index.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc"
   },
-  "license": "ISC",
+  "dependencies": {
+    "@project/shared": "workspace:*"
+  },
   "devDependencies": {
     "vitest": "^3.2.4"
   }

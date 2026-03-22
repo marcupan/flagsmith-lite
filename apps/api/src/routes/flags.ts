@@ -1,6 +1,12 @@
 import { eq, desc } from "drizzle-orm";
 import type { FastifyPluginAsync } from "fastify";
-import type { CreateFlagBody, Flag, UpdateFlagBody } from "@project/shared";
+import {
+  FlagKey,
+  Timestamp,
+  type CreateFlagBody,
+  type Flag,
+  type UpdateFlagBody,
+} from "@project/shared";
 import { flagKeyExists, flagNotFound } from "../errors.js";
 import { flags } from "../schema.js";
 import type { Db } from "../db.js";
@@ -13,16 +19,16 @@ declare module "fastify" {
   }
 }
 
-// Convert DB row dates to ISO strings for the API response
+// Convert DB row dates to branded types for the API response
 function toFlagResponse(row: typeof flags.$inferSelect): Flag {
   return {
     id: row.id,
-    key: row.key,
+    key: FlagKey(row.key),
     name: row.name,
     enabled: row.enabled,
     description: row.description,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: Timestamp(row.createdAt),
+    updatedAt: Timestamp(row.updatedAt),
   };
 }
 
