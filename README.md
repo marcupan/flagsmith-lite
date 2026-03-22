@@ -54,7 +54,7 @@ curl http://localhost:3000/health    # verify API is running
 ## Key Decisions
 
 | Decision          | Choice                             | Record                                        |
-|-------------------|------------------------------------|-----------------------------------------------|
+| ----------------- | ---------------------------------- | --------------------------------------------- |
 | API style         | REST + Fastify + shared TS types   | [ADR-001](docs/adr/001-api-style.md)          |
 | DB schema         | Single `flags` table, boolean-only | [ADR-002](docs/adr/002-db-schema-strategy.md) |
 | Environment model | Per-env overrides (proposed)       | [ADR-003](docs/adr/003-environment-model.md)  |
@@ -66,7 +66,7 @@ Full endpoint reference with request/response examples: [docs/API.md](docs/API.m
 Highlights:
 
 | Endpoint                    | Auth    | Description            |
-|-----------------------------|---------|------------------------|
+| --------------------------- | ------- | ---------------------- |
 | `GET /health`               | Public  | Health check           |
 | `GET /api/v1/flags`         | API key | List all flags         |
 | `POST /api/v1/flags`        | API key | Create flag            |
@@ -90,7 +90,7 @@ or `pnpm typecheck` runs hit cache (~100 ms) when source hasn't changed.
 ## Tests
 
 | Package   | Unit | Integration | E2E | Total  |
-|-----------|------|-------------|-----|--------|
+| --------- | ---- | ----------- | --- | ------ |
 | shared    | 25   | —           | —   | 25     |
 | sdk       | 16   | —           | —   | 16     |
 | api       | 16   | 15          | 6   | 37     |

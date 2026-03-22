@@ -100,11 +100,11 @@ export const flagOverrides = pgTable(
     id: serial("id").primaryKey(),
     flagId: integer("flag_id")
       .notNull()
-      .references(() => flags.id, {onDelete: "cascade"}),
+      .references(() => flags.id, { onDelete: "cascade" }),
     environment: text("environment").notNull(),
     enabled: boolean("enabled").notNull(),
-    createdAt: timestamp("created_at", {withTimezone: true}).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", {withTimezone: true}).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     flagEnvUq: unique("flag_overrides_flag_env_uq").on(t.flagId, t.environment),
@@ -154,7 +154,7 @@ Response gains an `environment` field:
 **Override management** — new endpoints under `/api/v1/flags/:key/overrides`:
 
 | Method | Path                                | Action                       |
-|--------|-------------------------------------|------------------------------|
+| ------ | ----------------------------------- | ---------------------------- |
 | GET    | `/api/v1/flags/:key/overrides`      | List overrides for a flag    |
 | PUT    | `/api/v1/flags/:key/overrides/:env` | Set override (upsert)        |
 | DELETE | `/api/v1/flags/:key/overrides/:env` | Remove override (use global) |
@@ -162,7 +162,7 @@ Response gains an `environment` field:
 ### 3.6 Cache Evolution
 
 | Current                      | Proposed                           |
-|------------------------------|------------------------------------|
+| ---------------------------- | ---------------------------------- |
 | `flag:{key}` → `"1"` / `"0"` | `flag:{env}:{key}` → `"1"` / `"0"` |
 
 Cache invalidation on flag update:
@@ -190,7 +190,7 @@ export interface EvaluateResponse {
 ## 4. Alternatives Considered
 
 | Approach                               | How                                                                      | Tradeoff                                                                                                                                              |
-|----------------------------------------|--------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A: Separate flag per environment       | `dark-mode-dev`, `dark-mode-prod` as independent flags                   | Simplest — zero schema change. But no conceptual link between envs, cleanup is manual, reporting is fragmented.                                       |
 | B: Environment as column on flags      | Add `environment TEXT` column to `flags`, one row per env                | Simple queries — `WHERE key = ? AND environment = ?`. But flag metadata (name, description) is duplicated per row. Renaming requires updating N rows. |
 | **C: Separate `flag_overrides` table** | **`flags` (metadata) + `flag_overrides(flag_id, environment, enabled)`** | **Normalized — flag metadata lives once. Override is a small additive table. Cost: one JOIN (or two queries) per evaluate.**                          |
