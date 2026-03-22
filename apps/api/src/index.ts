@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "./db.js";
 import { createCache, type Cache } from "./cache.js";
+import { resolveErrorResponse } from "./error-handler.js";
 import { authPlugin } from "./plugins/auth.js";
 import { healthRoute } from "./routes/health.js";
 import { flagsRoutes } from "./routes/flags.js";
@@ -72,7 +73,7 @@ export async function buildServer(opts: BuildServerOptions) {
   server.decorate("cache", opts.cache);
 
   server.setErrorHandler((error, request, reply) => {
-    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    const { statusCode, code, message } = resolveErrorResponse(error);
 
     if (statusCode >= 500) {
       request.log.error({ err: error }, "Unhandled server error");
@@ -81,10 +82,8 @@ export async function buildServer(opts: BuildServerOptions) {
     }
 
     void reply.status(statusCode).send({
-      code:
-        (error as { code?: string }).code ??
-        (statusCode >= 500 ? "INTERNAL_ERROR" : "VALIDATION_ERROR"),
-      message: statusCode >= 500 ? "Internal server error" : (error as Error).message,
+      code,
+      message,
       requestId: request.id,
     });
   });

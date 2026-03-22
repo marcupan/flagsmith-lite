@@ -7,8 +7,12 @@
     "dev": "tsx watch --env-file .env src/index.ts",
     "start": "tsx src/index.ts",
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --config vitest.unit.config.ts && vitest run",
     "test:watch": "vitest",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:integration": "vitest run src/__tests__/flags.test.ts src/__tests__/health.test.ts src/__tests__/evaluate.test.ts",
+    "test:e2e": "vitest run src/__tests__/e2e/",
+    "test:coverage": "vitest run --coverage",
     "migrate": "tsx migrate.ts",
     "migrate:local": "tsx --env-file .env migrate.ts"
   },

@@ -25,12 +25,14 @@ describe("GET /api/v1/flags", () => {
       url: "/api/v1/flags",
       headers: authHeader,
     });
+
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
   });
 
   it("returns 401 without API key", async () => {
     const res = await server.inject({ method: "GET", url: "/api/v1/flags" });
+
     expect(res.statusCode).toBe(401);
     expect(res.json().code).toBe("UNAUTHORIZED");
   });
@@ -44,8 +46,11 @@ describe("POST /api/v1/flags", () => {
       headers: authHeader,
       payload: { key: "my-feature", name: "My Feature", enabled: false },
     });
+
     expect(res.statusCode).toBe(201);
+
     const body = res.json();
+
     expect(body.key).toBe("my-feature");
     expect(body.enabled).toBe(false);
     expect(typeof body.id).toBe("number");
@@ -65,6 +70,7 @@ describe("POST /api/v1/flags", () => {
       headers: authHeader,
       payload,
     });
+
     expect(res.statusCode).toBe(409);
     expect(res.json().code).toBe("FLAG_KEY_EXISTS");
   });
@@ -76,6 +82,7 @@ describe("POST /api/v1/flags", () => {
       headers: authHeader,
       payload: { key: "UPPERCASE_NOT_ALLOWED", name: "Bad" },
     });
+
     expect(res.statusCode).toBe(400);
   });
 });
@@ -87,6 +94,7 @@ describe("GET /api/v1/flags/:key", () => {
       url: "/api/v1/flags/nonexistent",
       headers: authHeader,
     });
+
     expect(res.statusCode).toBe(404);
     expect(res.json().code).toBe("FLAG_NOT_FOUND");
   });
@@ -103,6 +111,7 @@ describe("GET /api/v1/flags/:key", () => {
       url: "/api/v1/flags/test-flag",
       headers: authHeader,
     });
+
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(true);
   });
@@ -122,6 +131,7 @@ describe("PUT /api/v1/flags/:key", () => {
       headers: authHeader,
       payload: { enabled: true },
     });
+
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(true);
   });
@@ -140,6 +150,7 @@ describe("DELETE /api/v1/flags/:key", () => {
       url: "/api/v1/flags/to-delete",
       headers: authHeader,
     });
+
     expect(res.statusCode).toBe(200);
     expect(res.json().deleted).toBe(true);
   });
@@ -150,6 +161,7 @@ describe("DELETE /api/v1/flags/:key", () => {
       url: "/api/v1/flags/ghost",
       headers: authHeader,
     });
+
     expect(res.statusCode).toBe(404);
   });
 });

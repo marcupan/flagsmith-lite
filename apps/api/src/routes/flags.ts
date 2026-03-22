@@ -1,13 +1,8 @@
 import { eq, desc } from "drizzle-orm";
 import type { FastifyPluginAsync } from "fastify";
-import {
-  FlagKey,
-  Timestamp,
-  type CreateFlagBody,
-  type Flag,
-  type UpdateFlagBody,
-} from "@project/shared";
+import type { CreateFlagBody, Flag, UpdateFlagBody } from "@project/shared";
 import { flagKeyExists, flagNotFound } from "../errors.js";
+import { toFlagResponse } from "../mappers.js";
 import { flags } from "../schema.js";
 import type { Db } from "../db.js";
 import type { Cache } from "../cache.js";
@@ -17,19 +12,6 @@ declare module "fastify" {
     db: Db;
     cache: Cache | null;
   }
-}
-
-// Convert DB row dates to branded types for the API response
-function toFlagResponse(row: typeof flags.$inferSelect): Flag {
-  return {
-    id: row.id,
-    key: FlagKey(row.key),
-    name: row.name,
-    enabled: row.enabled,
-    description: row.description,
-    createdAt: Timestamp(row.createdAt),
-    updatedAt: Timestamp(row.updatedAt),
-  };
 }
 
 const createFlagSchema = {
