@@ -5,6 +5,9 @@ node_modules
 # Build output — in all packages
 **/dist/
 
+# Turborepo cache
+.turbo
+
 .DS_Store
 .env
 .env.dev

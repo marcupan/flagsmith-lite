@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "Feature flag service — Staff Engineer learning project",
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
-    "test": "pnpm -r --if-present test",
-    "typecheck": "pnpm -r exec tsc --noEmit",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "test:unit": "turbo test:unit",
+    "typecheck": "turbo typecheck",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,yml,yaml,md}\"",
     "format:write": "prettier --write \"**/*.{ts,tsx,json,yml,yaml,md}\"",
     "lint": "eslint .",
@@ -14,7 +15,8 @@
     "docs:check-links": "node scripts/check-docs-links.mjs",
     "doctor": "node scripts/doctor.mjs",
     "smoke:health": "node scripts/smoke-health.mjs",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm build && pnpm docs:check-links"
+    "verify": "pnpm format:check && pnpm lint && turbo typecheck && turbo build && pnpm docs:check-links",
+    "clean": "turbo clean && rm -rf node_modules"
   },
   "license": "ISC",
   "packageManager": "pnpm@10.30.3",
@@ -26,6 +28,7 @@
     "globals": "^16.2.0",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
+    "turbo": "^2.8.20",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.34.1"
   }
