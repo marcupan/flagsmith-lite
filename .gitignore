@@ -16,3 +16,4 @@ node_modules
 
 docs/*/
 !docs/adr
+!docs/rfcs
