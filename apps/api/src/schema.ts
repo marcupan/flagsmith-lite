@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, text, timestamp, index } from "drizzle-orm/pg-core";
 
 export const flags = pgTable("flags", {
   id: serial("id").primaryKey(),
@@ -42,3 +42,21 @@ export const webhookDeliveries = pgTable("webhook_deliveries", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ── Delivery Transitions (audit log) ─────────────────────────────────────
+
+export const deliveryTransitions = pgTable(
+  "delivery_transitions",
+  {
+    id: serial("id").primaryKey(),
+    deliveryId: integer("delivery_id")
+      .notNull()
+      .references(() => webhookDeliveries.id, { onDelete: "cascade" }),
+    /** null for initial creation (→ pending) */
+    fromState: text("from_state"),
+    toState: text("to_state").notNull(),
+    reason: text("reason").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_delivery_transitions_delivery_id").on(table.deliveryId)],
+);

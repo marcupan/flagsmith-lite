@@ -5,10 +5,12 @@ import {
   type CreateWebhookBody,
   type WebhookEventType,
   type WebhookSubscription,
+  type WebhookDelivery,
+  type DeliveryTransition,
 } from "@project/shared";
 import { webhookNotFound, webhookInvalidUrl, webhookInvalidEvents } from "../errors.js";
-import { toWebhookResponse } from "../mappers.js";
-import { webhookSubscriptions } from "../schema.js";
+import { toWebhookResponse, toDeliveryResponse, toTransitionResponse } from "../mappers.js";
+import { webhookSubscriptions, webhookDeliveries, deliveryTransitions } from "../schema.js";
 
 const URL_RE = /^https?:\/\/.+/;
 
@@ -104,6 +106,52 @@ export const webhooksRoutes: FastifyPluginAsync = async (fastify) => {
       request.log.info({ subscriptionId: id }, "Webhook subscription deleted");
 
       return reply.status(200).send({ deleted: true });
+    },
+  );
+
+  // GET /webhooks/:id/deliveries — list deliveries for a subscription
+  fastify.get<{ Params: { id: string }; Reply: WebhookDelivery[] }>(
+    "/:id/deliveries",
+    async (request) => {
+      const id = Number(request.params.id);
+
+      if (!Number.isInteger(id) || id <= 0) {
+        throw webhookNotFound(id);
+      }
+
+      const sub = await fastify.db.query.webhookSubscriptions.findFirst({
+        where: eq(webhookSubscriptions.id, id),
+      });
+
+      if (!sub) {
+        throw webhookNotFound(id);
+      }
+
+      const rows = await fastify.db.query.webhookDeliveries.findMany({
+        where: eq(webhookDeliveries.subscriptionId, id),
+        orderBy: [desc(webhookDeliveries.createdAt)],
+      });
+
+      return rows.map(toDeliveryResponse);
+    },
+  );
+
+  // GET /webhooks/deliveries/:deliveryId/transitions — audit log for a delivery
+  fastify.get<{ Params: { deliveryId: string }; Reply: DeliveryTransition[] }>(
+    "/deliveries/:deliveryId/transitions",
+    async (request) => {
+      const deliveryId = Number(request.params.deliveryId);
+
+      if (!Number.isInteger(deliveryId) || deliveryId <= 0) {
+        return [];
+      }
+
+      const rows = await fastify.db.query.deliveryTransitions.findMany({
+        where: eq(deliveryTransitions.deliveryId, deliveryId),
+        orderBy: [desc(deliveryTransitions.createdAt)],
+      });
+
+      return rows.map(toTransitionResponse);
     },
   );
 };

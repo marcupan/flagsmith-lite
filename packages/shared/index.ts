@@ -2,6 +2,7 @@
 export { type Brand, FlagKey, type FlagKey as FlagKeyType, Timestamp } from "./branded.js";
 export type { Timestamp as TimestampType } from "./branded.js";
 export { exhaustive } from "./exhaustive.js";
+export { canTransition, transition, isTerminal, nextStates } from "./state-machine.js";
 
 // ── Constants ───────────────────────────────────────────────────────────
 
@@ -176,4 +177,22 @@ export interface WebhookDelivery {
   lastError: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/** Audit log entry for a delivery state change. */
+export interface DeliveryTransition {
+  deliveryId: number;
+  from: DeliveryState | null;
+  to: DeliveryState;
+  reason: string;
+  timestamp: Timestamp;
+}
+
+/** Payload shape sent to consumer webhook URLs. */
+export interface WebhookPayload {
+  event: WebhookEventType;
+  key: string;
+  enabled: boolean;
+  timestamp: string;
+  deliveryId: number;
 }

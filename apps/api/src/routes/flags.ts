@@ -4,6 +4,7 @@ import type { CreateFlagBody, Flag, UpdateFlagBody } from "@project/shared";
 import { flagKeyExists, flagNotFound } from "../errors.js";
 import { toFlagResponse } from "../mappers.js";
 import { flags } from "../schema.js";
+import { enqueueDeliveries } from "../delivery-service.js";
 import type { Db } from "../db.js";
 import type { Cache } from "../cache.js";
 
@@ -135,6 +136,22 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
         await fastify.cache
           .del(`flag:${request.params.key}`)
           .catch((err: Error) => fastify.log.warn({ err }, "Cache invalidation failed"));
+      }
+
+      // Dispatch webhook deliveries when a flag is toggled
+      if (request.body.enabled !== undefined) {
+        const enqueued = await enqueueDeliveries(fastify.db, {
+          flagKey: row.key,
+          eventType: "flag.toggled",
+          enabled: row.enabled,
+        }).catch((err: Error) => {
+          fastify.log.error({ err }, "Failed to enqueue webhook deliveries");
+          return 0;
+        });
+
+        if (enqueued > 0) {
+          request.log.info({ flagKey: row.key, enqueued }, "Webhook deliveries enqueued");
+        }
       }
 
       return toFlagResponse(row);
