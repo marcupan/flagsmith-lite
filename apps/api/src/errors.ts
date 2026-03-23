@@ -22,3 +22,12 @@ export const flagNotFound = (key: string) => appError("FLAG_NOT_FOUND", `Flag "$
 
 export const flagKeyExists = (key: string) =>
   appError("FLAG_KEY_EXISTS", `Flag with key "${key}" already exists`);
+
+export const webhookNotFound = (id: number) =>
+  appError("WEBHOOK_NOT_FOUND", `Webhook subscription ${id} not found`);
+
+export const webhookInvalidUrl = (url: string) =>
+  appError("WEBHOOK_INVALID_URL", `Invalid webhook URL: ${url}`);
+
+export const webhookInvalidEvents = () =>
+  appError("WEBHOOK_INVALID_EVENTS", "Events must contain only valid webhook event types");

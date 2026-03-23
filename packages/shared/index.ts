@@ -95,6 +95,9 @@ export const ErrorCodes = {
   UNAUTHORIZED: { status: 401, message: "Invalid or missing API key" },
   INTERNAL_ERROR: { status: 500, message: "Internal server error" },
   SERVICE_UNAVAILABLE: { status: 503, message: "Service unavailable" },
+  WEBHOOK_NOT_FOUND: { status: 404, message: "Webhook subscription not found" },
+  WEBHOOK_INVALID_URL: { status: 400, message: "Invalid webhook URL" },
+  WEBHOOK_INVALID_EVENTS: { status: 400, message: "Invalid webhook event types" },
 } as const satisfies Record<string, { status: number; message: string }>;
 
 /** Machine-readable error codes returned by the API. */
@@ -122,4 +125,55 @@ export interface AppErrorResponse {
   message: string;
   /** Request correlation ID (UUID or caller-supplied slug) */
   requestId: string;
+}
+
+// ── Webhooks ─────────────────────────────────────────────────────────────
+
+/** Event types that trigger webhook delivery to subscribed consumers. */
+export type WebhookEventType = "flag.toggled" | "flag.created" | "flag.deleted";
+
+/** All known webhook event types, for runtime validation. */
+export const WEBHOOK_EVENT_TYPES: readonly WebhookEventType[] = [
+  "flag.toggled",
+  "flag.created",
+  "flag.deleted",
+] as const;
+
+/** Webhook subscription as returned by the API. */
+export interface WebhookSubscription {
+  id: number;
+  /** Consumer URL that receives POST notifications */
+  url: string;
+  /** Which events this subscription listens for */
+  events: WebhookEventType[];
+  /** Whether this subscription is active */
+  active: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+/** Request body for `POST /api/v1/webhooks`. */
+export interface CreateWebhookBody {
+  /** Consumer endpoint URL (must be https in production, http allowed in dev) */
+  url: string;
+  /** Events to subscribe to */
+  events: WebhookEventType[];
+  /** Shared secret for HMAC-SHA256 signature verification */
+  secret: string;
+}
+
+/** Delivery lifecycle states. Terminal states: delivered, dead. */
+export type DeliveryState = "pending" | "sending" | "delivered" | "failed" | "retrying" | "dead";
+
+/** Webhook delivery record as returned by the API. */
+export interface WebhookDelivery {
+  id: number;
+  subscriptionId: number;
+  flagKey: FlagKey;
+  eventType: WebhookEventType;
+  state: DeliveryState;
+  attempts: number;
+  lastError: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }

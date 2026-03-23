@@ -13,6 +13,7 @@ import { authPlugin } from "./plugins/auth.js";
 import { healthRoute } from "./routes/health.js";
 import { flagsRoutes } from "./routes/flags.js";
 import { evaluateRoutes } from "./routes/evaluate.js";
+import { webhooksRoutes } from "./routes/webhooks.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -101,6 +102,7 @@ export async function buildServer(opts: BuildServerOptions) {
       await v1.register(async (authed) => {
         await authed.register(authPlugin, { apiKey: opts.apiKey });
         await authed.register(flagsRoutes, { prefix: "/flags" });
+        await authed.register(webhooksRoutes, { prefix: "/webhooks" });
       });
     },
     { prefix: "/api/v1" },
