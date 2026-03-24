@@ -1,7 +1,7 @@
 /**
  * Webhook delivery orchestration — enqueue and process deliveries.
  *
- * Enqueue: creates delivery rows + transition audit log entries.
+ * Enqueue: creates delivery rows and transition audit log entries.
  * Process: sends HTTP POST to consumer, manages state transitions.
  *
  * This module has no Fastify dependency — it takes a Db instance
@@ -13,6 +13,16 @@ import { eq, and } from "drizzle-orm";
 import { type WebhookEventType, transition, type WebhookPayload } from "@project/shared";
 import { webhookSubscriptions, webhookDeliveries, deliveryTransitions } from "./schema.js";
 import type { Db } from "./db.js";
+import { getBreaker, domainOf, CircuitOpenError } from "./circuit-breaker.js";
+
+// ── Errors ───────────────────────────────────────────────────────────────
+
+class HttpError extends Error {
+  constructor(public readonly status: number) {
+    super(`HTTP ${status}`);
+    this.name = "HttpError";
+  }
+}
 
 // ── Configuration ────────────────────────────────────────────────────────
 
@@ -157,23 +167,35 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
   const signature = signPayload(body, subscription.secret);
   const attemptNumber = delivery.attempts + 1;
 
-  // 3. POST to consumer
+  // 3. POST to consumer (wrapped in circuit breaker)
+  const domain = domainOf(subscription.url);
+  const breaker = getBreaker(domain);
+
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS);
+    const response = await breaker.execute(async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS);
 
-    const response = await fetch(subscription.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Webhook-Signature": `sha256=${signature}`,
-        "X-Delivery-Id": String(delivery.id),
-      },
-      body,
-      signal: controller.signal,
+      const res = await fetch(subscription.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Webhook-Signature": `sha256=${signature}`,
+          "X-Delivery-Id": String(delivery.id),
+        },
+        body,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      // Throw on 5xx so the breaker counts it as failure
+      if (res.status >= 500) {
+        throw new HttpError(res.status);
+      }
+
+      return res;
     });
-
-    clearTimeout(timeout);
 
     if (response.ok) {
       // 4. 2xx → delivered
@@ -181,7 +203,7 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
         attempts: attemptNumber,
       });
     } else if (response.status >= 400 && response.status < 500) {
-      // 5. 4xx → failed (permanent)
+      // 5. 4xx → failed (permanent) — does NOT trip breaker (not a server fault)
       await transitionDelivery(
         db,
         deliveryId,
@@ -190,16 +212,20 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
         `HTTP ${response.status} (permanent)`,
         { attempts: attemptNumber, lastError: `HTTP ${response.status}` },
       );
-      // Permanent failure → dead immediately
       await transitionDelivery(db, deliveryId, "failed", "dead", "4xx is not retryable");
-    } else {
-      // 6. 5xx → retrying or dead
-      await handleRetry(db, deliveryId, attemptNumber, `HTTP ${response.status}`);
     }
   } catch (err) {
-    // Network error or timeout
-    const message = err instanceof Error ? err.message : "Unknown error";
-    await handleRetry(db, deliveryId, attemptNumber, message);
+    if (err instanceof CircuitOpenError) {
+      // Circuit is open — don't even try, put back for later
+      await handleRetry(db, deliveryId, attemptNumber, `Circuit open for ${domain}`);
+    } else if (err instanceof HttpError) {
+      // 5xx — already counted by breaker
+      await handleRetry(db, deliveryId, attemptNumber, `HTTP ${err.status}`);
+    } else {
+      // Network error or timeout
+      const message = err instanceof Error ? err.message : "Unknown error";
+      await handleRetry(db, deliveryId, attemptNumber, message);
+    }
   }
 }
 
