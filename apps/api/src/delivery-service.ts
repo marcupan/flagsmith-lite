@@ -11,7 +11,7 @@
 import { createHmac } from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import { type WebhookEventType, transition, type WebhookPayload } from "@project/shared";
-import { webhookSubscriptions, webhookDeliveries, deliveryTransitions } from "./schema.js";
+import { flags, webhookSubscriptions, webhookDeliveries, deliveryTransitions } from "./schema.js";
 import type { Db } from "./db.js";
 import { getBreaker, domainOf, CircuitOpenError } from "./circuit-breaker.js";
 import type { Logger } from "pino";
@@ -167,11 +167,15 @@ export async function processDelivery(db: Db, deliveryId: number, logger?: Logge
 
   log?.info({ attempt: delivery.attempts + 1, url: subscription.url }, "Sending delivery");
 
-  // 2. Build payload
+  // 2. Build payload — read the current flag state from DB (not hardcoded)
+  const flag = await db.query.flags.findFirst({
+    where: eq(flags.key, delivery.flagKey),
+  });
+
   const payload: WebhookPayload = {
     event: delivery.eventType as WebhookEventType,
     key: delivery.flagKey,
-    enabled: true, // Will be resolved from flag state in future phases
+    enabled: flag?.enabled ?? false,
     timestamp: new Date().toISOString(),
     deliveryId: delivery.id,
   };

@@ -16,7 +16,9 @@ export const webhookSubscriptions = pgTable("webhook_subscriptions", {
   id: serial("id").primaryKey(),
   /** Consumer endpoint that receives POST notifications */
   url: text("url").notNull(),
-  /** HMAC-SHA256 secret for signing payloads (stored hashed, worker needs plaintext via encryption) */
+  // TODO(security): Secret is stored plaintext. Encrypt at rest with AES-256-GCM
+  // using a server-managed key (env var or KMS). Decrypt in worker before HMAC signing.
+  // Risk: DB read access (backup leak, SQL injection) exposes all secrets.
   secret: text("secret").notNull(),
   /** JSON-encoded array of event types, e.g. ["flag.toggled","flag.created"] */
   events: text("events").array().notNull(),

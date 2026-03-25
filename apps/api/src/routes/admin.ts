@@ -39,6 +39,9 @@ async function findDelivery(db: Db, id: number) {
 // Drizzle sql`` tagged templates use `count(*)::int` which IDE SQL inspectors
 // misparse — the runtime and TypeScript compiler handle them correctly.
 
+// TODO(auth): Admin routes share the same API key as regular CRUD. In production,
+// use a separate ADMIN_API_KEY or RBAC scope to prevent SDK consumers from
+// accessing delivery stats, audit logs, and replay functionality.
 export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /admin/delivery-stats — aggregate counts by state
   fastify.get<{ Reply: DeliveryStats }>("/delivery-stats", async () => {
