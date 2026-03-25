@@ -56,6 +56,7 @@ export function toDeliveryResponse(row: typeof webhookDeliveries.$inferSelect): 
     state: row.state as DeliveryState,
     attempts: row.attempts,
     lastError: row.lastError,
+    correlationId: row.correlationId,
     createdAt: Timestamp(row.createdAt),
     updatedAt: Timestamp(row.updatedAt),
   };

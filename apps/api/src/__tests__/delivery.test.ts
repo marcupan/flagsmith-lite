@@ -58,6 +58,7 @@ describe("enqueueDeliveries", () => {
       flagKey: "dark-mode",
       eventType: "flag.toggled",
       enabled: true,
+      correlationId: "test-correlation-id",
     });
 
     expect(count).toBe(1);
@@ -81,6 +82,7 @@ describe("enqueueDeliveries", () => {
       flagKey: "dark-mode",
       eventType: "flag.toggled",
       enabled: true,
+      correlationId: "test-correlation-id",
     });
 
     expect(count).toBe(0);
@@ -98,6 +100,7 @@ describe("enqueueDeliveries", () => {
       flagKey: "dark-mode",
       eventType: "flag.toggled",
       enabled: true,
+      correlationId: "test-correlation-id",
     });
 
     expect(count).toBe(0);
@@ -123,6 +126,7 @@ describe("enqueueDeliveries", () => {
       flagKey: "dark-mode",
       eventType: "flag.toggled",
       enabled: true,
+      correlationId: "test-correlation-id",
     });
 
     expect(count).toBe(2);
@@ -140,6 +144,7 @@ describe("enqueueDeliveries", () => {
       flagKey: "dark-mode",
       eventType: "flag.toggled",
       enabled: true,
+      correlationId: "test-correlation-id",
     });
 
     const transitions = await db.query.deliveryTransitions.findMany();
@@ -175,6 +180,7 @@ describe("processDelivery", () => {
         flagKey: "dark-mode",
         eventType: "flag.toggled",
         state: "pending",
+        correlationId: "test-correlation-id",
       })
       .returning();
 
@@ -224,6 +230,7 @@ describe("processDelivery", () => {
         flagKey: "dark-mode",
         eventType: "flag.toggled",
         state: "pending",
+        correlationId: "test-correlation-id",
       })
       .returning();
 
@@ -269,6 +276,7 @@ describe("processDelivery", () => {
         flagKey: "dark-mode",
         eventType: "flag.toggled",
         state: "pending",
+        correlationId: "test-correlation-id",
       })
       .returning();
 
@@ -316,6 +324,7 @@ describe("processDelivery", () => {
         eventType: "flag.toggled",
         state: "retrying",
         attempts: 4,
+        correlationId: "test-correlation-id",
       })
       .returning();
 
@@ -358,6 +367,7 @@ describe("processDelivery", () => {
         flagKey: "dark-mode",
         eventType: "flag.toggled",
         state: "pending",
+        correlationId: "test-correlation-id",
       })
       .returning();
 

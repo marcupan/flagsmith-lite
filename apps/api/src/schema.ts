@@ -39,6 +39,8 @@ export const webhookDeliveries = pgTable("webhook_deliveries", {
   state: text("state").notNull().default("pending"),
   attempts: integer("attempts").notNull().default(0),
   lastError: text("last_error"),
+  /** End-to-end trace ID linking API request → enqueue → worker → delivery */
+  correlationId: text("correlation_id").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

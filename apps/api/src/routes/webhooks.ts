@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import type { FastifyPluginAsync } from "fastify";
 import {
   WEBHOOK_EVENT_TYPES,
@@ -110,31 +110,44 @@ export const webhooksRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /webhooks/:id/deliveries — list deliveries for a subscription
-  fastify.get<{ Params: { id: string }; Reply: WebhookDelivery[] }>(
-    "/:id/deliveries",
-    async (request) => {
-      const id = Number(request.params.id);
+  // Supports ?state=failed&limit=20 query filters
+  fastify.get<{
+    Params: { id: string };
+    Querystring: { state?: string; limit?: string };
+    Reply: WebhookDelivery[];
+  }>("/:id/deliveries", async (request) => {
+    const id = Number(request.params.id);
 
-      if (!Number.isInteger(id) || id <= 0) {
-        throw webhookNotFound(id);
-      }
+    if (!Number.isInteger(id) || id <= 0) {
+      throw webhookNotFound(id);
+    }
 
-      const sub = await fastify.db.query.webhookSubscriptions.findFirst({
-        where: eq(webhookSubscriptions.id, id),
-      });
+    const sub = await fastify.db.query.webhookSubscriptions.findFirst({
+      where: eq(webhookSubscriptions.id, id),
+    });
 
-      if (!sub) {
-        throw webhookNotFound(id);
-      }
+    if (!sub) {
+      throw webhookNotFound(id);
+    }
 
-      const rows = await fastify.db.query.webhookDeliveries.findMany({
-        where: eq(webhookDeliveries.subscriptionId, id),
-        orderBy: [desc(webhookDeliveries.createdAt)],
-      });
+    const conditions = [eq(webhookDeliveries.subscriptionId, id)];
 
-      return rows.map(toDeliveryResponse);
-    },
-  );
+    // Optional state filter
+    const stateFilter = request.query.state;
+    if (stateFilter) {
+      conditions.push(eq(webhookDeliveries.state, stateFilter));
+    }
+
+    const limit = Math.min(Number(request.query.limit) || 50, 200);
+
+    const rows = await fastify.db.query.webhookDeliveries.findMany({
+      where: and(...conditions),
+      orderBy: [desc(webhookDeliveries.createdAt)],
+      limit,
+    });
+
+    return rows.map(toDeliveryResponse);
+  });
 
   // GET /webhooks/deliveries/:deliveryId/transitions — audit log for a delivery
   fastify.get<{ Params: { deliveryId: string }; Reply: DeliveryTransition[] }>(

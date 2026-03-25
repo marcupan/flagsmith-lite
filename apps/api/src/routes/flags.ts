@@ -13,6 +13,9 @@ declare module "fastify" {
     db: Db;
     cache: Cache | null;
   }
+  interface FastifyRequest {
+    correlationId: string;
+  }
 }
 
 const createFlagSchema = {
@@ -144,8 +147,9 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
           flagKey: row.key,
           eventType: "flag.toggled",
           enabled: row.enabled,
+          correlationId: request.correlationId,
         }).catch((err: Error) => {
-          fastify.log.error({ err }, "Failed to enqueue webhook deliveries");
+          request.log.error({ err }, "Failed to enqueue webhook deliveries");
           return 0;
         });
 

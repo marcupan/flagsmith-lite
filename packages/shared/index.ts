@@ -175,6 +175,8 @@ export interface WebhookDelivery {
   state: DeliveryState;
   attempts: number;
   lastError: string | null;
+  /** End-to-end trace ID from the originating API request */
+  correlationId: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

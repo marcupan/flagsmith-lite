@@ -14,6 +14,7 @@ import { type WebhookEventType, transition, type WebhookPayload } from "@project
 import { webhookSubscriptions, webhookDeliveries, deliveryTransitions } from "./schema.js";
 import type { Db } from "./db.js";
 import { getBreaker, domainOf, CircuitOpenError } from "./circuit-breaker.js";
+import type { Logger } from "pino";
 
 // ── Errors ───────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export interface EnqueueParams {
   flagKey: string;
   eventType: WebhookEventType;
   enabled: boolean;
+  correlationId: string;
 }
 
 /**
@@ -63,6 +65,7 @@ export async function enqueueDeliveries(db: Db, params: EnqueueParams): Promise<
         subscriptionId: sub.id,
         flagKey: params.flagKey,
         eventType: params.eventType,
+        correlationId: params.correlationId,
       })
       .returning();
 
@@ -131,7 +134,7 @@ async function transitionDelivery(
  * 5. On 4xx → failed (permanent, no retry)
  * 6. On 5xx/timeout → retrying (or dead if max attempts reached)
  */
-export async function processDelivery(db: Db, deliveryId: number): Promise<void> {
+export async function processDelivery(db: Db, deliveryId: number, logger?: Logger): Promise<void> {
   // Fetch the delivery + its subscription
   const delivery = await db.query.webhookDeliveries.findFirst({
     where: eq(webhookDeliveries.id, deliveryId),
@@ -139,12 +142,20 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
 
   if (!delivery) return;
 
+  // Create a child logger scoped to this delivery's correlation
+  const log = logger?.child({
+    correlationId: delivery.correlationId,
+    deliveryId: delivery.id,
+    flagKey: delivery.flagKey,
+    subscriptionId: delivery.subscriptionId,
+  });
+
   const subscription = await db.query.webhookSubscriptions.findFirst({
     where: eq(webhookSubscriptions.id, delivery.subscriptionId),
   });
 
   if (!subscription) {
-    // Subscription was deleted — mark delivery as failed
+    log?.warn("Subscription deleted — marking delivery as dead");
     await transitionDelivery(db, deliveryId, delivery.state, "failed", "Subscription deleted");
     await transitionDelivery(db, deliveryId, "failed", "dead", "Subscription no longer exists");
 
@@ -153,6 +164,8 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
 
   // 1. pending → sending (or retrying → sending)
   await transitionDelivery(db, deliveryId, delivery.state, "sending", "Worker picked up delivery");
+
+  log?.info({ attempt: delivery.attempts + 1, url: subscription.url }, "Sending delivery");
 
   // 2. Build payload
   const payload: WebhookPayload = {
@@ -182,6 +195,7 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
           "Content-Type": "application/json",
           "X-Webhook-Signature": `sha256=${signature}`,
           "X-Delivery-Id": String(delivery.id),
+          "X-Correlation-Id": delivery.correlationId,
         },
         body,
         signal: controller.signal,
@@ -199,11 +213,13 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
 
     if (response.ok) {
       // 4. 2xx → delivered
+      log?.info({ status: response.status }, "Delivery successful");
       await transitionDelivery(db, deliveryId, "sending", "delivered", `HTTP ${response.status}`, {
         attempts: attemptNumber,
       });
     } else if (response.status >= 400 && response.status < 500) {
       // 5. 4xx → failed (permanent) — does NOT trip breaker (not a server fault)
+      log?.warn({ status: response.status }, "Delivery permanently failed (4xx)");
       await transitionDelivery(
         db,
         deliveryId,
@@ -216,14 +232,14 @@ export async function processDelivery(db: Db, deliveryId: number): Promise<void>
     }
   } catch (err) {
     if (err instanceof CircuitOpenError) {
-      // Circuit is open — don't even try, put back for later
+      log?.warn({ domain }, "Circuit open — deferring delivery");
       await handleRetry(db, deliveryId, attemptNumber, `Circuit open for ${domain}`);
     } else if (err instanceof HttpError) {
-      // 5xx — already counted by breaker
+      log?.error({ status: err.status, attempt: attemptNumber }, "Delivery failed (5xx)");
       await handleRetry(db, deliveryId, attemptNumber, `HTTP ${err.status}`);
     } else {
-      // Network error or timeout
       const message = err instanceof Error ? err.message : "Unknown error";
+      log?.error({ err: message, attempt: attemptNumber }, "Delivery failed (network/timeout)");
       await handleRetry(db, deliveryId, attemptNumber, message);
     }
   }
@@ -276,7 +292,7 @@ async function handleRetry(
  *
  * Returns the number of deliveries processed.
  */
-export async function processPendingDeliveries(db: Db): Promise<number> {
+export async function processPendingDeliveries(db: Db, logger?: Logger): Promise<number> {
   const pending = await db.query.webhookDeliveries.findMany({
     where: and(eq(webhookDeliveries.state, "pending")),
   });
@@ -289,7 +305,7 @@ export async function processPendingDeliveries(db: Db): Promise<number> {
   let processed = 0;
 
   for (const delivery of all) {
-    await processDelivery(db, delivery.id);
+    await processDelivery(db, delivery.id, logger);
     processed++;
   }
 

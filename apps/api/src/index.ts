@@ -14,6 +14,7 @@ import { healthRoute } from "./routes/health.js";
 import { flagsRoutes } from "./routes/flags.js";
 import { evaluateRoutes } from "./routes/evaluate.js";
 import { webhooksRoutes } from "./routes/webhooks.js";
+import { adminRoutes } from "./routes/admin.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -41,8 +42,29 @@ export async function buildServer(opts: BuildServerOptions) {
     },
   });
 
+  // Add a service name to every log line
+  server.log = server.log.child({ service: "flagsmith-api" });
+
+  // Propagate correlationId across the entire request lifecycle.
+  // Callers can supply X-Correlation-Id to trace a flow end-to-end;
+  // otherwise a fresh UUID is generated.
+  server.addHook("onRequest", (request, _reply, done) => {
+    const incoming = request.headers["x-correlation-id"];
+    const correlationId =
+      typeof incoming === "string" && /^[\w-]{1,64}$/.test(incoming) ? incoming : randomUUID();
+
+    // Store on request for route handlers and downstream services
+    request.correlationId = correlationId;
+
+    // Replace the request logger with a child that includes correlationId
+    request.log = request.log.child({ correlationId, service: "flagsmith-api" });
+
+    done();
+  });
+
   server.addHook("onSend", async (request, reply) => {
     void reply.header("x-request-id", request.id);
+    void reply.header("x-correlation-id", request.correlationId);
   });
 
   const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
@@ -103,6 +125,7 @@ export async function buildServer(opts: BuildServerOptions) {
         await authed.register(authPlugin, { apiKey: opts.apiKey });
         await authed.register(flagsRoutes, { prefix: "/flags" });
         await authed.register(webhooksRoutes, { prefix: "/webhooks" });
+        await authed.register(adminRoutes, { prefix: "/admin" });
       });
     },
     { prefix: "/api/v1" },
