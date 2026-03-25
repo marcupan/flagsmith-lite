@@ -39,12 +39,10 @@ async function findDelivery(db: Db, id: number) {
 // Drizzle sql`` tagged templates use `count(*)::int` which IDE SQL inspectors
 // misparse — the runtime and TypeScript compiler handle them correctly.
 
-const countExprStr = `count(*)::int`;
-
 export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /admin/delivery-stats — aggregate counts by state
   fastify.get<{ Reply: DeliveryStats }>("/delivery-stats", async () => {
-    const countExpr = sql<number>`${countExprStr}`;
+    const countExpr = sql<number>`count(*)::int`;
 
     const rows = await fastify.db
       .select({ state: webhookDeliveries.state, count: countExpr })
