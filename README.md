@@ -200,7 +200,8 @@ pnpm --filter @project/sdk test              # SDK client with mock fetch
 
 This project is deliberately constrained. Full scope analysis: [docs/SCOPE.md](docs/SCOPE.md)
 
-**In scope:** boolean flags, webhook delivery with retry and circuit breaker, REST API, API key auth, Redis cache, Docker,
+**In scope:** boolean flags, webhook delivery with retry and circuit breaker, REST API, API key auth, Redis cache,
+Docker,
 CI pipeline, typed SDK, delivery state machine, admin endpoints, structured logging.
 
 **Explicitly excluded:** Kafka, multi-tenancy, real-time dashboard, OAuth subscription auth, payload templates, inbound
