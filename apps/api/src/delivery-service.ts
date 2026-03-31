@@ -14,6 +14,7 @@ import { type WebhookEventType, transition, type WebhookPayload } from "@project
 import { flags, webhookSubscriptions, webhookDeliveries, deliveryTransitions } from "./schema.js";
 import type { Db } from "./db.js";
 import { getBreaker, domainOf, CircuitOpenError } from "./circuit-breaker.js";
+import { deliveriesTotal, deliveryDuration, queueDepth } from "./metrics.js";
 import type { Logger } from "pino";
 
 // ── Errors ───────────────────────────────────────────────────────────────
@@ -135,6 +136,8 @@ async function transitionDelivery(
  * 6. On 5xx/timeout → retrying (or dead if max attempts reached)
  */
 export async function processDelivery(db: Db, deliveryId: number, logger?: Logger): Promise<void> {
+  const startTime = performance.now();
+
   // Fetch the delivery + its subscription
   const delivery = await db.query.webhookDeliveries.findFirst({
     where: eq(webhookDeliveries.id, deliveryId),
@@ -221,6 +224,9 @@ export async function processDelivery(db: Db, deliveryId: number, logger?: Logge
       await transitionDelivery(db, deliveryId, "sending", "delivered", `HTTP ${response.status}`, {
         attempts: attemptNumber,
       });
+
+      deliveriesTotal.inc({ state: "delivered" });
+      deliveryDuration.observe({ result: "success" }, (performance.now() - startTime) / 1000);
     } else if (response.status >= 400 && response.status < 500) {
       // 5. 4xx → failed (permanent) — does NOT trip breaker (not a server fault)
       log?.warn({ status: response.status }, "Delivery permanently failed (4xx)");
@@ -233,6 +239,9 @@ export async function processDelivery(db: Db, deliveryId: number, logger?: Logge
         { attempts: attemptNumber, lastError: `HTTP ${response.status}` },
       );
       await transitionDelivery(db, deliveryId, "failed", "dead", "4xx is not retryable");
+
+      deliveriesTotal.inc({ state: "dead" });
+      deliveryDuration.observe({ result: "failure" }, (performance.now() - startTime) / 1000);
     }
   } catch (err) {
     if (err instanceof CircuitOpenError) {
@@ -284,6 +293,8 @@ async function handleRetry(
       "dead",
       `Max retries (${MAX_ATTEMPTS}) exhausted`,
     );
+
+    deliveriesTotal.inc({ state: "dead" });
   }
 }
 
@@ -306,6 +317,9 @@ export async function processPendingDeliveries(db: Db, logger?: Logger): Promise
   });
 
   const all = [...pending, ...retrying];
+
+  queueDepth.set(all.length);
+
   let processed = 0;
 
   for (const delivery of all) {

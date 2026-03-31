@@ -15,6 +15,7 @@ import { flagsRoutes } from "./routes/flags.js";
 import { evaluateRoutes } from "./routes/evaluate.js";
 import { webhooksRoutes } from "./routes/webhooks.js";
 import { adminRoutes } from "./routes/admin.js";
+import { registry, httpRequestDuration, httpRequestTotal } from "./metrics.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -109,6 +110,24 @@ export async function buildServer(opts: BuildServerOptions) {
       message,
       requestId: request.id,
     });
+  });
+
+  // Record request metrics on every response (golden signals: latency + traffic)
+  server.addHook("onResponse", (request, reply, done) => {
+    const route = request.routeOptions?.url || "unknown";
+    const labels = { method: request.method, route, status: String(reply.statusCode) };
+
+    httpRequestDuration.observe(labels, reply.elapsedTime / 1000);
+    httpRequestTotal.inc(labels);
+
+    done();
+  });
+
+  // Prometheus metrics endpoint — unprotected (infra, not business API)
+  server.get("/metrics", async (_request, reply) => {
+    void reply.header("Content-Type", registry.contentType);
+
+    return registry.metrics();
   });
 
   // Health check — unversioned (infrastructure, not business API)

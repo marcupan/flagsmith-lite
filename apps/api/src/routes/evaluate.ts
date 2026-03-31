@@ -5,6 +5,7 @@ import { flagNotFound } from "../errors.js";
 import { flags } from "../schema.js";
 import type { Db } from "../db.js";
 import type { Cache } from "../cache.js";
+import { flagEvaluations } from "../metrics.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -34,6 +35,8 @@ export const evaluateRoutes: FastifyPluginAsync = async (fastify) => {
           const cached = await fastify.cache.get(`flag:${flagKey}`);
 
           if (cached !== null) {
+            flagEvaluations.inc({ source: "cache" });
+
             return {
               key: flagKey,
               enabled: cached === "1",
@@ -63,6 +66,8 @@ export const evaluateRoutes: FastifyPluginAsync = async (fastify) => {
           .set(`flag:${flagKey}`, row.enabled ? "1" : "0", "EX", CACHE_TTL_SECONDS)
           .catch((err: Error) => request.log.warn({ err }, "Cache write failed"));
       }
+
+      flagEvaluations.inc({ source: "database" });
 
       return {
         key: flagKey,

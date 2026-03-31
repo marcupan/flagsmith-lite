@@ -12,6 +12,7 @@ TypeScript is the current strength — this project deepens it, not teaches it.
 ## Part of Skill Path
 
 This project is part of a larger career development plan:
+
 - [Skill path overview](../../README.md)
 - [TypeScript track overview](../README.md)
 - [Core roadmap](../../../career-path/core-track/00-roadmap.md)
@@ -21,6 +22,7 @@ This project is part of a larger career development plan:
 ## Learning Roadmap
 
 Already has 4-phase learning roadmap in `docs/learning-roadmap/`:
+
 1. Foundation & Delivery — architecture, ADR, CI/CD
 2. Reliability & Operations — observability, SLO, incidents
 3. Product & Business — KPI, analytics, experiments

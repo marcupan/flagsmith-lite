@@ -1,0 +1,60 @@
+groups:
+  - name: flagsmith-lite
+    rules:
+      # ── Error Rate ─────────────────────────────────────────────────
+      - alert: HighErrorRate
+        expr: >
+          rate(http_requests_total{status=~"5.."}[5m])
+          /
+          rate(http_requests_total[5m])
+          > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate above 5% for 2 minutes"
+          description: >
+            More than 5% of HTTP requests are returning 5xx status codes.
+            Check API logs and recent deployments.
+
+      # ── Latency ────────────────────────────────────────────────────
+      - alert: HighLatency
+        expr: >
+          histogram_quantile(0.95,
+            rate(http_request_duration_seconds_bucket[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 latency above 100ms for 5 minutes"
+          description: >
+            The 95th percentile of HTTP request duration exceeds 100ms.
+            Check database performance, Redis connectivity, and recent
+            code changes.
+
+      # ── Queue Depth ────────────────────────────────────────────────
+      - alert: QueueBacklog
+        expr: webhook_queue_depth > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Webhook queue depth above 100 for 5 minutes"
+          description: >
+            More than 100 deliveries are waiting in the queue. The worker
+            may be stuck, consumers may be down (circuit breakers open),
+            or delivery volume exceeds capacity.
+
+      # ── Dead Letter Growth ─────────────────────────────────────────
+      - alert: DeadLetterGrowing
+        expr: rate(webhook_deliveries_total{state="dead"}[15m]) > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Webhook deliveries entering dead state for 15+ minutes"
+          description: >
+            Deliveries are consistently failing all retry attempts and
+            entering the dead-letter state. Check consumer health, webhook
+            URLs, and circuit breaker state.
