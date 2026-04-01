@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch --env-file .env src/index.ts",
+    "dev:worker": "tsx watch --env-file .env src/worker.ts",
     "start": "tsx src/index.ts",
     "build": "tsc",
     "test": "vitest run --config vitest.unit.config.ts && vitest run",
