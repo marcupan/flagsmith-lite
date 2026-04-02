@@ -1,0 +1,17 @@
+{
+  "name": "@project/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "cli": "src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "commander": "^13.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

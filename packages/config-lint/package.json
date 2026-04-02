@@ -1,0 +1,20 @@
+{
+  "name": "@project/config-lint",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "eslint.config.mjs",
+  "license": "ISC",
+  "files": [
+    "eslint.config.mjs",
+    "prettier.config.js"
+  ],
+  "dependencies": {
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.2.0",
+    "typescript-eslint": "^8.34.1"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

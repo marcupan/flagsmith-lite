@@ -3,7 +3,7 @@
 ## Measurements
 
 | Action                                 | Time          | Target | Status                |
-|----------------------------------------|---------------|--------|-----------------------|
+| -------------------------------------- | ------------- | ------ | --------------------- |
 | `pnpm install` (cached)                | 0.5s          | < 5s   | PASS                  |
 | `pnpm install` (cold, no cache)        | ~15s          | < 30s  | PASS                  |
 | `turbo build` (cold, 1 uncached)       | 3.1s          | < 30s  | PASS                  |
@@ -83,7 +83,7 @@ cross-project boundaries.
 ## Measurements After Fixes
 
 | Action                              | Before                   | After                    | Improvement             |
-|-------------------------------------|--------------------------|--------------------------|-------------------------|
+| ----------------------------------- | ------------------------ | ------------------------ | ----------------------- |
 | Fresh clone → running app           | ~45s + 6 manual steps    | ~45s + 0 manual steps    | 100% fewer manual steps |
 | Empty DB → testable state           | ~2 min (3 curl commands) | ~3s (one script)         | 97% faster              |
 | Worker code change → effect visible | ~15s (restart manually)  | ~1s (watch auto-restart) | 93% faster              |

@@ -1,6 +1,7 @@
 {
   "name": "1-flagsmith-lite",
   "version": "1.0.0",
+  "type": "module",
   "description": "Feature flag service — Staff Engineer learning project",
   "scripts": {
     "dev": "turbo dev",
@@ -16,16 +17,15 @@
     "doctor": "node scripts/doctor.mjs",
     "smoke:health": "node scripts/smoke-health.mjs",
     "verify": "pnpm format:check && pnpm lint && turbo typecheck && turbo build && pnpm docs:check-links",
+    "cli": "tsx packages/cli/src/index.ts",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "license": "ISC",
   "packageManager": "pnpm@10.30.3",
   "devDependencies": {
+    "@project/config-lint": "workspace:*",
     "@types/node": "^25.3.3",
     "eslint": "^9.28.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "globals": "^16.2.0",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "turbo": "^2.8.20",
