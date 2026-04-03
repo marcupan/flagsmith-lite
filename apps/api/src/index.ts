@@ -15,7 +15,12 @@ import { flagsRoutes } from "./routes/flags.js";
 import { evaluateRoutes } from "./routes/evaluate.js";
 import { webhooksRoutes } from "./routes/webhooks.js";
 import { adminRoutes } from "./routes/admin.js";
-import { registry, httpRequestDuration, httpRequestTotal } from "./metrics.js";
+import {
+  registry,
+  httpRequestDuration,
+  httpRequestTotal,
+  dbPoolMaxConnections,
+} from "./metrics.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -174,6 +179,9 @@ async function start() {
   const cache = redisUrl ? createCache(redisUrl) : null;
 
   const db = createDb(databaseUrl);
+
+  // Expose pool size as Prometheus metric (Incident 001 action item)
+  dbPoolMaxConnections.set(10);
 
   const server = await buildServer({ db, cache, apiKey });
   const port = Number(process.env.PORT ?? 3000);

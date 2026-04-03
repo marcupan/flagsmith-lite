@@ -76,3 +76,20 @@ export const circuitBreakerState = new Gauge({
   labelNames: ["domain"] as const,
   registers: [registry],
 });
+
+// ── Database Pool Metrics (Action item from Incident 001) ──────────────
+
+export const dbPoolMaxConnections = new Gauge({
+  name: "db_pool_max_connections",
+  help: "Maximum number of connections in the DB pool",
+  registers: [registry],
+});
+
+// ── Delivery Failure Rate (Action item from Incident 002) ──────────────
+
+export const deliveryAttempts = new Counter({
+  name: "webhook_delivery_attempts_total",
+  help: "Total webhook delivery attempts by result",
+  labelNames: ["result"] as const, // "success" | "failure"
+  registers: [registry],
+});

@@ -2,6 +2,13 @@
 
 Operational procedures for diagnosing and resolving webhook delivery issues.
 
+## Incident History
+
+| ID  | Title                         | Severity | Postmortem                                              |
+|-----|-------------------------------|----------|---------------------------------------------------------|
+| 001 | DB Connection Pool Exhaustion | SEV2     | [001-db-overload](incidents/001-db-overload.md)         |
+| 002 | Webhook Consumer Outage       | SEV3     | [002-consumer-outage](incidents/002-consumer-outage.md) |
+
 ## Prerequisites
 
 All commands assume:
@@ -189,7 +196,8 @@ ORDER BY dt.created_at;
 
 **Cause:**
 
-The consumer at `example.com` failed 5+ consecutive requests. The circuit breaker opened to protect both the consumer (from being hammered) and the worker (from wasting time on timeouts).
+The consumer at `example.com` failed 5+ consecutive requests. The circuit breaker opened to protect both the consumer (
+from being hammered) and the worker (from wasting time on timeouts).
 
 **Resolution:**
 
@@ -299,6 +307,108 @@ VALUES (<delivery_id>, '<current_state>', 'dead', 'Manual kill: <reason>', now()
 
 Always record the transition in `delivery_transitions` for audit trail. Never leave a delivery in a modified state
 without a corresponding transition log entry.
+
+---
+
+## Scenario: Database Connection Pool Exhaustion
+
+> Learned from [Incident 001](incidents/001-db-overload.md)
+
+**Symptoms:**
+
+- API latency spikes above 1s (p95)
+- Error rate rises above 5%
+- `pnpm cli health` shows API responding but slow
+- Grafana latency panel shows sudden spike
+
+**Diagnosis:**
+
+1. Check for long-running queries or locks:
+
+```sql
+SELECT pid, now() - query_start AS duration, query, state, wait_event_type
+FROM pg_stat_activity
+WHERE state != 'idle'
+ORDER BY duration DESC;
+```
+
+2. Check for blocked queries:
+
+```sql
+SELECT blocked.pid    AS blocked_pid,
+       blocked.query  AS blocked_query,
+       blocking.pid   AS blocking_pid,
+       blocking.query AS blocking_query
+FROM pg_stat_activity blocked
+       JOIN pg_locks blocked_locks ON blocked.pid = blocked_locks.pid
+       JOIN pg_locks blocking_locks ON blocked_locks.locktype = blocking_locks.locktype
+  AND blocked_locks.relation = blocking_locks.relation
+  AND blocked_locks.pid != blocking_locks.pid
+       JOIN pg_stat_activity blocking ON blocking_locks.pid = blocking.pid
+WHERE NOT blocked_locks.granted;
+```
+
+**Resolution:**
+
+1. Kill the blocking query: `SELECT pg_terminate_backend(<blocking_pid>);`
+2. If no specific blocker: restart the API process to reset the connection pool
+3. Verify recovery: `pnpm cli health` + `pnpm cli metrics`
+
+**Prevention:**
+
+- DB connections have `connect_timeout: 10s` and `idle_timeout: 20s`
+- Pool size is limited to 10 connections
+- Always use `CONCURRENTLY` for production index/migration operations
+
+---
+
+## Scenario: Webhook Consumer Outage (All Consumers Down)
+
+> Learned from [Incident 002](incidents/002-consumer-outage.md)
+
+**Symptoms:**
+
+- `circuit_breaker_state` metric shows value 2 (open) for one or more domains
+- `webhook_queue_depth` rising steadily
+- `webhook_deliveries_total{state="dead"}` incrementing
+- Logs contain `"Circuit open for <domain>, deferring delivery"`
+
+**Diagnosis:**
+
+1. Identify affected domains: `pnpm cli metrics` — look for `circuit_breaker_state`
+2. Check which subscriptions are affected:
+
+```sql
+SELECT ws.id,
+       ws.url,
+       ws.active,
+       count(wd.id) FILTER (WHERE wd.state = 'dead')     AS dead_count,
+       count(wd.id) FILTER (WHERE wd.state = 'retrying') AS retrying_count
+FROM webhook_subscriptions ws
+       LEFT JOIN webhook_deliveries wd ON ws.id = wd.subscription_id
+GROUP BY ws.id, ws.url, ws.active
+HAVING count(wd.id) FILTER (WHERE wd.state IN ('dead', 'retrying')) > 0;
+```
+
+3. Test consumer reachability: `curl -v <consumer_url>`
+
+**Resolution:**
+
+1. Wait for consumer recovery — circuit breaker will auto-probe every 30s
+2. If consumer is confirmed back: restart API to reset all circuit breakers
+3. Replay dead deliveries:
+
+```bash
+# List dead deliveries
+docker compose exec db psql -U app -d flagsmith -c \
+  "SELECT id, flag_key FROM webhook_deliveries WHERE state = 'dead' ORDER BY id;"
+
+# Replay via admin API (one at a time)
+curl -X POST "http://localhost:3000/api/v1/admin/deliveries/<id>/replay" \
+  -H "X-Api-Key: $API_KEY"
+```
+
+4. Or replay all dead deliveries for a subscription (see "How to Replay Dead Deliveries" above)
 
 ---
 

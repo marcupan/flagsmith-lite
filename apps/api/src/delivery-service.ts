@@ -14,7 +14,7 @@ import { type WebhookEventType, transition, type WebhookPayload } from "@project
 import { flags, webhookSubscriptions, webhookDeliveries, deliveryTransitions } from "./schema.js";
 import type { Db } from "./db.js";
 import { getBreaker, domainOf, CircuitOpenError } from "./circuit-breaker.js";
-import { deliveriesTotal, deliveryDuration, queueDepth } from "./metrics.js";
+import { deliveriesTotal, deliveryDuration, queueDepth, deliveryAttempts } from "./metrics.js";
 import type { Logger } from "pino";
 
 // ── Errors ───────────────────────────────────────────────────────────────
@@ -226,6 +226,7 @@ export async function processDelivery(db: Db, deliveryId: number, logger?: Logge
       });
 
       deliveriesTotal.inc({ state: "delivered" });
+      deliveryAttempts.inc({ result: "success" });
       deliveryDuration.observe({ result: "success" }, (performance.now() - startTime) / 1000);
     } else if (response.status >= 400 && response.status < 500) {
       // 5. 4xx → failed (permanent) — does NOT trip breaker (not a server fault)
@@ -241,6 +242,7 @@ export async function processDelivery(db: Db, deliveryId: number, logger?: Logge
       await transitionDelivery(db, deliveryId, "failed", "dead", "4xx is not retryable");
 
       deliveriesTotal.inc({ state: "dead" });
+      deliveryAttempts.inc({ result: "failure" });
       deliveryDuration.observe({ result: "failure" }, (performance.now() - startTime) / 1000);
     }
   } catch (err) {
@@ -267,6 +269,8 @@ async function handleRetry(
   attemptNumber: number,
   errorMessage: string,
 ): Promise<void> {
+  deliveryAttempts.inc({ result: "failure" });
+
   if (attemptNumber < MAX_ATTEMPTS) {
     await transitionDelivery(
       db,
