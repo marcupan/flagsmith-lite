@@ -5,7 +5,7 @@ Operational procedures for diagnosing and resolving webhook delivery issues.
 ## Incident History
 
 | ID  | Title                         | Severity | Postmortem                                              |
-|-----|-------------------------------|----------|---------------------------------------------------------|
+| --- | ----------------------------- | -------- | ------------------------------------------------------- |
 | 001 | DB Connection Pool Exhaustion | SEV2     | [001-db-overload](incidents/001-db-overload.md)         |
 | 002 | Webhook Consumer Outage       | SEV3     | [002-consumer-outage](incidents/002-consumer-outage.md) |
 

@@ -37,6 +37,7 @@ COPY --from=installer /app/apps/api/migrate.ts ./apps/api/
 COPY --from=installer /app/apps/api/src ./apps/api/src
 COPY --from=installer /app/apps/api/tsconfig.json ./apps/api/
 COPY --from=installer /app/packages/shared ./packages/shared
+COPY --from=installer /app/packages/config-ts ./packages/config-ts
 COPY --from=installer /app/package.json .
 COPY --from=installer /app/pnpm-workspace.yaml .
 COPY --from=installer /app/tsconfig.base.json .

@@ -167,7 +167,7 @@ pnpm doctor
 ## Key decisions
 
 | Decision           | ADR                                        | Summary                                                  |
-|--------------------|--------------------------------------------|----------------------------------------------------------|
+| ------------------ | ------------------------------------------ | -------------------------------------------------------- |
 | Queue technology   | [ADR-004](adr/004-queue-technology.md)     | pg-boss (Postgres) — transactional enqueue, no new infra |
 | Idempotency        | [ADR-005](adr/005-idempotency-strategy.md) | Row-level locking via delivery ID, no Redis lock         |
 | DB schema strategy | [ADR-002](adr/002-db-schema-strategy.md)   | Drizzle ORM with generated migrations                    |

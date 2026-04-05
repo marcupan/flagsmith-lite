@@ -5,20 +5,20 @@ services:
       POSTGRES_DB: flagr
       POSTGRES_USER: flagr
       POSTGRES_PASSWORD: password
-    ports: [ "${DB_PORT:-5433}:5432" ]
-    networks: [ app ]
+    ports: ["${DB_PORT:-5433}:5432"]
+    networks: [app]
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U flagr -d flagr" ]
+      test: ["CMD-SHELL", "pg_isready -U flagr -d flagr"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   cache:
     image: redis:7
-    ports: [ "${REDIS_PORT:-6379}:6379" ]
-    networks: [ app ]
+    ports: ["${REDIS_PORT:-6379}:6379"]
+    networks: [app]
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,8 +27,8 @@ services:
     build:
       context: .
       dockerfile: ./apps/api/Dockerfile
-    ports: [ "${API_PORT:-3000}:3000" ]
-    networks: [ app ]
+    ports: ["${API_PORT:-3000}:3000"]
+    networks: [app]
     environment:
       - NODE_ENV=development
       - DATABASE_URL=${DATABASE_URL:-postgres://flagr:password@db:5432/flagr}
@@ -55,8 +55,8 @@ services:
     build:
       context: .
       dockerfile: ./apps/api/Dockerfile
-    command: [ "pnpm", "exec", "tsx", "src/worker.ts" ]
-    networks: [ app ]
+    command: ["pnpm", "exec", "tsx", "src/worker.ts"]
+    networks: [app]
     environment:
       - NODE_ENV=development
       - DATABASE_URL=${DATABASE_URL:-postgres://flagr:password@db:5432/flagr}
@@ -72,8 +72,8 @@ services:
     build:
       context: .
       dockerfile: ./apps/web/Dockerfile
-    ports: [ "5173:5173" ]
-    networks: [ app ]
+    ports: ["5173:5173"]
+    networks: [app]
     environment:
       - VITE_API_URL=http://localhost:3000
       - VITE_API_KEY=local-dev-key
@@ -83,8 +83,8 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    ports: [ "9090:9090" ]
-    networks: [ app ]
+    ports: ["9090:9090"]
+    networks: [app]
     volumes:
       - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
@@ -99,8 +99,8 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    ports: [ "3001:3000" ]
-    networks: [ app ]
+    ports: ["3001:3000"]
+    networks: [app]
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -117,7 +117,7 @@ services:
     ports:
       # Bind to loopback only — n8n has code execution; never expose to 0.0.0.0
       - "127.0.0.1:5678:5678"
-    networks: [ app ]
+    networks: [app]
     volumes:
       - n8n_data:/home/node/.n8n
       - ./workflows:/workflows

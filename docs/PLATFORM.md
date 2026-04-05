@@ -5,7 +5,7 @@ Tools and shared configurations that make the right path the easy path.
 ## Shared Packages
 
 | Package                | What                       | Used by            |
-|------------------------|----------------------------|--------------------|
+| ---------------------- | -------------------------- | ------------------ |
 | `@project/config-ts`   | TypeScript base configs    | All packages       |
 | `@project/config-lint` | ESLint + Prettier config   | Root config        |
 | `@project/cli`         | CLI tools for the project  | Developers         |
@@ -17,7 +17,7 @@ Tools and shared configurations that make the right path the easy path.
 Three configs in `packages/config-ts/`:
 
 | Config       | Extends | Purpose                     |
-|--------------|---------|-----------------------------|
+| ------------ | ------- | --------------------------- |
 | `base.json`  | —       | Strictest shared settings   |
 | `node.json`  | base    | Node.js packages (api, sdk) |
 | `react.json` | base    | React + DOM (web)           |
@@ -47,7 +47,7 @@ Usage in any package `tsconfig.json`:
 Root `eslint.config.mjs` composes them:
 
 ```js
-import {base, api, web, shared, scripts} from "@project/config-lint";
+import { base, api, web, shared, scripts } from "@project/config-lint";
 
 export default tsEsLint.config(...base, ...api, ...web, ...shared, ...scripts);
 ```
@@ -55,7 +55,7 @@ export default tsEsLint.config(...base, ...api, ...web, ...shared, ...scripts);
 Root `prettier.config.js` re-exports the shared config:
 
 ```js
-export {default} from "@project/config-lint/prettier.config.js";
+export { default } from "@project/config-lint/prettier.config.js";
 ```
 
 ### How to add a new lint rule
@@ -69,7 +69,7 @@ export {default} from "@project/config-lint/prettier.config.js";
 Run with `pnpm cli <command>`:
 
 | Command                      | What it does                                                  |
-|------------------------------|---------------------------------------------------------------|
+| ---------------------------- | ------------------------------------------------------------- |
 | `pnpm cli new:adr <title>`   | Create a new ADR from template, auto-numbered                 |
 | `pnpm cli new:migration <n>` | Create a timestamped migration SQL file                       |
 | `pnpm cli health`            | Check all services: API, Postgres, Redis, Prometheus, Grafana |
