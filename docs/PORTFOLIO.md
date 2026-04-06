@@ -40,7 +40,7 @@ Turborepo.
 ## Key Artifacts
 
 | Type              | Count | Location                   |
-|-------------------|-------|----------------------------|
+| ----------------- | ----- | -------------------------- |
 | ADR               | 5     | `docs/adr/`                |
 | RFC               | 1     | `docs/rfcs/`               |
 | Postmortem        | 2     | `docs/incidents/`          |
@@ -59,7 +59,7 @@ Turborepo.
 ## Staff+ Skills Demonstrated
 
 | Skill                     | Evidence                                                               |
-|---------------------------|------------------------------------------------------------------------|
+| ------------------------- | ---------------------------------------------------------------------- |
 | System design             | Webhook delivery architecture with queue, retry, circuit breaker       |
 | Technical decision-making | 5 ADRs with context, alternatives, consequences                        |
 | Scope management          | Explicit non-goals with rationale, effort/impact quadrant              |

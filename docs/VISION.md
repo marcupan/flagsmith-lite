@@ -56,7 +56,7 @@ A **production-ready feature flag service** that can:
 ### Why
 
 | Target                      | Business driver                                                   |
-|-----------------------------|-------------------------------------------------------------------|
+| --------------------------- | ----------------------------------------------------------------- |
 | 500+ concurrent users       | Growth from internal tool to team-wide service                    |
 | 99.9% delivery success      | Consumers depend on webhooks for cache invalidation, audit trails |
 | Horizontal scaling          | Single-process architecture is a bus factor of 1 for uptime       |
@@ -97,7 +97,7 @@ A **production-ready feature flag service** that can:
 ## 4. What We Will Not Do
 
 | Non-goal                           | Why not                                                                                                                       |
-|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Multi-tenant architecture          | Single-tenant covers all reliability patterns. Multi-tenancy adds isolation, billing, quota — orthogonal concerns.            |
 | Kafka or distributed streaming     | pg-boss handles projected volume (10K deliveries/min). Kafka adds ZooKeeper/KRaft ops overhead for zero benefit at our scale. |
 | Real-time WebSocket dashboard      | Admin API covers all debugging needs. A real-time UI adds 15h+ frontend work for an incident-time-only use case.              |
@@ -108,7 +108,7 @@ A **production-ready feature flag service** that can:
 ## 5. Risks and Open Questions
 
 | Risk                                    | Impact                                 | Mitigation                                                              |
-|-----------------------------------------|----------------------------------------|-------------------------------------------------------------------------|
+| --------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------- |
 | pg-boss migration complexity            | Worker downtime during transition      | Feature flag the new worker; run both in parallel during migration      |
 | Horizontal scaling reveals hidden state | Bugs from shared-nothing assumption    | Load test at 500 VU before declaring scaling complete                   |
 | Secret encryption key management        | Key rotation failures = service outage | Start with env var, migrate to KMS only when multiple keys needed       |
@@ -116,7 +116,7 @@ A **production-ready feature flag service** that can:
 | Team knowledge concentration            | Creator leaving = knowledge loss       | Runbook + on-call docs + pair incident response sessions (Phase 3)      |
 
 | Open question                               | Decision needed by |
-|---------------------------------------------|--------------------|
+| ------------------------------------------- | ------------------ |
 | PgBouncer vs increasing Postgres pool size? | Phase 2 start      |
 | Self-hosted vs managed Postgres?            | Phase 2 start      |
 | Should secret encryption use KMS or env?    | Phase 3 start      |

@@ -1,8 +1,11 @@
 /**
  * k6 load test for flagsmith-lite API.
  *
- * Run:
- *   docker run --rm -i --network=host grafana/k6 run - <load-tests/smoke.js
+ * Run (macOS — Docker Desktop does not support --network=host):
+ *   docker run --rm -i \
+ *     -e BASE_URL=http://host.docker.internal:3000 \
+ *     -e API_KEY=change-me-in-production \
+ *     grafana/k6 run - <load-tests/smoke.js
  *
  * Or with k6 installed locally:
  *   k6 run load-tests/smoke.js

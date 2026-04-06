@@ -17,7 +17,7 @@
 ### Throughput
 
 | Metric         | Smoke (5 VU) | Load (100 VU peak) |
-|----------------|--------------|--------------------|
+| -------------- | ------------ | ------------------ |
 | Total requests | ~1,500       | ~18,000            |
 | Peak RPS       | ~50          | ~320               |
 | Sustained RPS  | ~50          | ~280               |
@@ -25,7 +25,7 @@
 ### Latency by Endpoint
 
 | Percentile | Evaluate | Toggle | Health |
-|------------|----------|--------|--------|
+| ---------- | -------- | ------ | ------ |
 | p50        | 2ms      | 8ms    | 1ms    |
 | p95        | 5ms      | 22ms   | 2ms    |
 | p99        | 12ms     | 45ms   | 4ms    |
@@ -33,7 +33,7 @@
 ### Latency at Peak Load (100 VU)
 
 | Percentile | Evaluate | Toggle | Health |
-|------------|----------|--------|--------|
+| ---------- | -------- | ------ | ------ |
 | p50        | 8ms      | 35ms   | 3ms    |
 | p95        | 18ms     | 85ms   | 8ms    |
 | p99        | 42ms     | 180ms  | 15ms   |
@@ -41,7 +41,7 @@
 ### Error Rate
 
 | Scenario | Total requests | Failed | Rate  |
-|----------|----------------|--------|-------|
+| -------- | -------------- | ------ | ----- |
 | Smoke    | ~1,500         | 0      | 0.00% |
 | Load     | ~18,000        | ~12    | 0.07% |
 
@@ -51,7 +51,7 @@ requests.
 ## SLO Compliance
 
 | SLO                      | Target  | Actual (smoke) | Actual (load peak) | Status   |
-|--------------------------|---------|----------------|--------------------|----------|
+| ------------------------ | ------- | -------------- | ------------------ | -------- |
 | Evaluate p95             | < 50ms  | 5ms            | 18ms               | **PASS** |
 | Evaluate p99             | < 50ms  | 12ms           | 42ms               | **PASS** |
 | API p95 (all endpoints)  | < 100ms | 22ms           | 85ms               | **PASS** |
@@ -90,7 +90,7 @@ Redis is not the limiting factor at this scale.
 ## Recommendations
 
 | Recommendation                              | Expected impact               | Effort | Priority |
-|---------------------------------------------|-------------------------------|--------|----------|
+| ------------------------------------------- | ----------------------------- | ------ | -------- |
 | Parallel worker processing (concurrency: 5) | 5x worker throughput          | M      | High     |
 | pg-boss queue (replaces poll-based)         | Near-instant dispatch         | L      | Medium   |
 | Connection pool increase (10 → 20)          | Reduce toggle p99 by ~50%     | S      | Medium   |
