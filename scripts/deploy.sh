@@ -8,11 +8,11 @@ set -euo pipefail
 #
 # This script:
 #   1. Validates pre-deploy conditions (clean git, CI green, env valid)
-#   2. Tags the deployment in git
+#   2. Tags the deployment-study in git
 #   3. Builds and tags a Docker image
 #   4. Deploys via docker compose (local/staging) or Railway (production)
 #   5. Runs post-deploy health check
-#   6. Logs the deployment to deployments.log
+#   6. Logs the deployment-study to deployments.log
 #
 # Rollback: ./scripts/rollback.sh <environment> <previous-version>
 
@@ -69,7 +69,7 @@ if ! pnpm verify > /dev/null 2>&1; then
 fi
 info "Pre-deploy checks passed"
 
-# ─── Step 2: Tag deployment ───────────────────────────────────────────
+# ─── Step 2: Tag deployment-study ───────────────────────────────────────────
 step 2 "Tagging deployment"
 
 git tag "${DEPLOY_TAG}"
@@ -136,7 +136,7 @@ else
   exit 1
 fi
 
-# ─── Step 6: Record deployment ───────────────────────────────────────
+# ─── Step 6: Record deployment-study ───────────────────────────────────────
 step 6 "Recording deployment"
 
 # Create log file with header if it doesn't exist
