@@ -6,6 +6,8 @@ export const flags = pgTable("flags", {
   name: text("name").notNull(),
   enabled: boolean("enabled").notNull().default(false),
   description: text("description"),
+  /** Percentage of users who see this flag when enabled (0-100). Default 100 = all users. */
+  rolloutPercentage: integer("rollout_percentage").notNull().default(100),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

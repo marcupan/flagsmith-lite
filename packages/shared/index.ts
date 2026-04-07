@@ -40,6 +40,8 @@ export interface Flag {
   enabled: boolean;
   /** Optional description, max 1024 chars */
   description: string | null;
+  /** Percentage of users who see this flag when enabled (0-100). Default 100 = all users. */
+  rolloutPercentage: number;
   /** ISO 8601 timestamp */
   createdAt: Timestamp;
   /** ISO 8601 timestamp */
@@ -56,6 +58,8 @@ export interface CreateFlagBody {
   enabled?: boolean;
   /** Optional description, max 1024 chars */
   description?: string;
+  /** Percentage of users who see this flag (0-100). Defaults to 100. */
+  rolloutPercentage?: number;
 }
 
 /** Request body for `PUT /api/v1/flags/:key`. All fields optional. */
@@ -66,9 +70,19 @@ export interface UpdateFlagBody {
   enabled?: boolean;
   /** Updated description, max 1024 chars */
   description?: string;
+  /** Percentage of users who see this flag (0-100). */
+  rolloutPercentage?: number;
 }
 
 // ── Evaluate ────────────────────────────────────────────────────────────
+
+/** Reason codes explaining why evaluate returned a given result. */
+export type EvaluateReason =
+  | "flag_disabled"
+  | "rollout_match"
+  | "rollout_miss"
+  | "no_user_id"
+  | "rollout_full";
 
 /** Response shape for `GET /api/v1/evaluate/:key`. */
 export interface EvaluateResponse {
@@ -76,6 +90,8 @@ export interface EvaluateResponse {
   key: FlagKey;
   /** Resolved flag state */
   enabled: boolean;
+  /** Why the flag resolved to this state */
+  reason: EvaluateReason;
   /** ISO 8601 timestamp of evaluation */
   evaluatedAt: Timestamp;
   /** Where the value was resolved from — `"cache"` (Redis, 30s TTL) or `"database"` */

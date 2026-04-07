@@ -9,6 +9,7 @@ function makeRow(overrides: Partial<Parameters<typeof toFlagResponse>[0]> = {}) 
     name: "Dark Mode",
     enabled: true,
     description: "Toggle dark theme",
+    rolloutPercentage: 100,
     createdAt: new Date("2026-01-15T12:00:00Z"),
     updatedAt: new Date("2026-01-15T13:00:00Z"),
     ...overrides,
@@ -31,6 +32,7 @@ describe("toFlagResponse", () => {
     expect(result.name).toBe("Dark Mode");
     expect(result.enabled).toBe(true);
     expect(result.description).toBe("Toggle dark theme");
+    expect(result.rolloutPercentage).toBe(100);
   });
 
   it("handles null description", () => {

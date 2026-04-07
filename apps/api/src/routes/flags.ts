@@ -33,6 +33,7 @@ const createFlagSchema = {
       name: { type: "string", minLength: 1, maxLength: 256 },
       enabled: { type: "boolean" },
       description: { type: "string", maxLength: 1024 },
+      rolloutPercentage: { type: "integer", minimum: 0, maximum: 100 },
     },
   },
 };
@@ -45,6 +46,7 @@ const updateFlagSchema = {
       name: { type: "string", minLength: 1, maxLength: 256 },
       enabled: { type: "boolean" },
       description: { type: "string", maxLength: 1024 },
+      rolloutPercentage: { type: "integer", minimum: 0, maximum: 100 },
     },
   },
 };
@@ -79,6 +81,7 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
           name: request.body.name,
           enabled: request.body.enabled ?? false,
           description: request.body.description ?? null,
+          rolloutPercentage: request.body.rolloutPercentage ?? 100,
         })
         .returning();
 
@@ -126,6 +129,15 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (request.body.description !== undefined) {
         updates.description = request.body.description;
+      }
+
+      if (request.body.rolloutPercentage !== undefined) {
+        updates.rolloutPercentage = request.body.rolloutPercentage;
+        // Setting rollout automatically enables the flag — a flag with
+        // rolloutPercentage makes no sense in disabled state
+        if (updates.enabled === undefined) {
+          updates.enabled = true;
+        }
       }
 
       const [row] = await fastify.db

@@ -27,6 +27,7 @@ export function toFlagResponse(row: typeof flags.$inferSelect): Flag {
     name: row.name,
     enabled: row.enabled,
     description: row.description,
+    rolloutPercentage: row.rolloutPercentage,
     createdAt: Timestamp(row.createdAt),
     updatedAt: Timestamp(row.updatedAt),
   };

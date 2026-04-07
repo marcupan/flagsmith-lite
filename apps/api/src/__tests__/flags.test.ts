@@ -39,7 +39,7 @@ describe("GET /api/v1/flags", () => {
 });
 
 describe("POST /api/v1/flags", () => {
-  it("creates a flag and returns 201", async () => {
+  it("creates a flag and returns 201 with default rolloutPercentage", async () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/v1/flags",
@@ -53,7 +53,31 @@ describe("POST /api/v1/flags", () => {
 
     expect(body.key).toBe("my-feature");
     expect(body.enabled).toBe(false);
+    expect(body.rolloutPercentage).toBe(100);
     expect(typeof body.id).toBe("number");
+  });
+
+  it("creates a flag with custom rolloutPercentage", async () => {
+    const res = await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "canary-flag", name: "Canary", enabled: true, rolloutPercentage: 25 },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().rolloutPercentage).toBe(25);
+  });
+
+  it("rejects rolloutPercentage out of range", async () => {
+    const res = await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "bad-pct", name: "Bad", rolloutPercentage: 150 },
+    });
+
+    expect(res.statusCode).toBe(400);
   });
 
   it("returns 409 when key already exists", async () => {
@@ -134,6 +158,43 @@ describe("PUT /api/v1/flags/:key", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(true);
+  });
+
+  it("updates rolloutPercentage and auto-enables", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "rollout-test", name: "Rollout Test", enabled: false },
+    });
+    const res = await server.inject({
+      method: "PUT",
+      url: "/api/v1/flags/rollout-test",
+      headers: authHeader,
+      payload: { rolloutPercentage: 50 },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().rolloutPercentage).toBe(50);
+    // Setting rolloutPercentage auto-enables the flag
+    expect(res.json().enabled).toBe(true);
+  });
+
+  it("rejects invalid rolloutPercentage", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "bad-update", name: "Bad Update" },
+    });
+    const res = await server.inject({
+      method: "PUT",
+      url: "/api/v1/flags/bad-update",
+      headers: authHeader,
+      payload: { rolloutPercentage: -5 },
+    });
+
+    expect(res.statusCode).toBe(400);
   });
 });
 

@@ -28,7 +28,7 @@ describe("GET /api/v1/evaluate/:key", () => {
     expect(res.json().code).toBe("FLAG_NOT_FOUND");
   });
 
-  it("returns enabled=false for a disabled flag", async () => {
+  it("returns enabled=false for a disabled flag with reason flag_disabled", async () => {
     await server.inject({
       method: "POST",
       url: "/api/v1/flags",
@@ -41,10 +41,11 @@ describe("GET /api/v1/evaluate/:key", () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(false);
+    expect(res.json().reason).toBe("flag_disabled");
     expect(res.json().source).toBe("database");
   });
 
-  it("returns enabled=true for an enabled flag", async () => {
+  it("returns enabled=true for an enabled flag with reason rollout_full", async () => {
     await server.inject({
       method: "POST",
       url: "/api/v1/flags",
@@ -54,6 +55,7 @@ describe("GET /api/v1/evaluate/:key", () => {
     const res = await server.inject({ method: "GET", url: "/api/v1/evaluate/live" });
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(true);
+    expect(res.json().reason).toBe("rollout_full");
   });
 
   it("is accessible without API key (public endpoint)", async () => {
@@ -69,5 +71,91 @@ describe("GET /api/v1/evaluate/:key", () => {
       // No auth header
     });
     expect(res.statusCode).toBe(200);
+    expect(res.json().reason).toBe("rollout_full");
+  });
+});
+
+describe("GET /api/v1/evaluate/:key — percentage targeting", () => {
+  it("returns rollout_match/rollout_miss based on userId", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "canary", name: "Canary", enabled: true, rolloutPercentage: 50 },
+    });
+
+    // Evaluate with different userIds — at least one should match and one should miss
+    const results: boolean[] = [];
+    for (let i = 0; i < 20; i++) {
+      const res = await server.inject({
+        method: "GET",
+        url: `/api/v1/evaluate/canary?userId=user-${i}`,
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(["rollout_match", "rollout_miss"]).toContain(body.reason);
+      results.push(body.enabled);
+    }
+
+    // At 50%, we expect a mix of true/false across 20 users
+    expect(results).toContain(true);
+    expect(results).toContain(false);
+  });
+
+  it("returns deterministic result for same userId", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "stable", name: "Stable", enabled: true, rolloutPercentage: 25 },
+    });
+
+    const res1 = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/stable?userId=user-42",
+    });
+    const res2 = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/stable?userId=user-42",
+    });
+
+    expect(res1.json().enabled).toBe(res2.json().enabled);
+    expect(res1.json().reason).toBe(res2.json().reason);
+  });
+
+  it("falls back to enabled=true without userId on partial rollout", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "no-uid", name: "No UID", enabled: true, rolloutPercentage: 25 },
+    });
+
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/no-uid",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().enabled).toBe(true);
+    expect(res.json().reason).toBe("no_user_id");
+  });
+
+  it("returns disabled when flag is disabled regardless of rollout", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "off-flag", name: "Off", enabled: false, rolloutPercentage: 100 },
+    });
+
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/off-flag?userId=user-1",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().enabled).toBe(false);
+    expect(res.json().reason).toBe("flag_disabled");
   });
 });

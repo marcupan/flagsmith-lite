@@ -29,6 +29,13 @@
       "when": 1774422164416,
       "tag": "0003_furry_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775606400000,
+      "tag": "0004_add_rollout_percentage",
+      "breakpoints": true
     }
   ]
 }

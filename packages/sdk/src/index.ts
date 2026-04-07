@@ -10,6 +10,12 @@ export interface FlagsmithClientOptions {
   fetch?: typeof globalThis.fetch;
 }
 
+/** Options for flag evaluation with targeting context. */
+export interface EvaluateOptions {
+  /** User identifier for percentage-based targeting. */
+  userId?: string;
+}
+
 /**
  * Typed SDK client for the flagsmith-lite evaluate API.
  *
@@ -42,10 +48,13 @@ export class FlagsmithClient {
    *
    * Safe default: returns `false` on any error (network, 404, timeout).
    * This is the standard SDK pattern — feature flags should fail closed.
+   *
+   * @param key - Flag key to evaluate
+   * @param opts - Optional targeting context (userId for percentage rollout)
    */
-  async isEnabled(key: FlagKey): Promise<boolean> {
+  async isEnabled(key: FlagKey, opts?: EvaluateOptions): Promise<boolean> {
     try {
-      const res = await this.fetchWithTimeout(`/api/v1/evaluate/${key}`);
+      const res = await this.fetchWithTimeout(this.evaluatePath(key, opts));
 
       if (!res.ok) {
         return false;
@@ -60,17 +69,31 @@ export class FlagsmithClient {
   }
 
   /**
-   * Evaluate a single flag. Returns the full response including a source.
+   * Evaluate a single flag. Returns the full response including source and reason.
    * Throws on non-2xx responses (unlike `isEnabled` which returns false).
+   *
+   * @param key - Flag key to evaluate
+   * @param opts - Optional targeting context (userId for percentage rollout)
    */
-  async evaluate(key: FlagKey): Promise<EvaluateResponse> {
-    const res = await this.fetchWithTimeout(`/api/v1/evaluate/${key}`);
+  async evaluate(key: FlagKey, opts?: EvaluateOptions): Promise<EvaluateResponse> {
+    const res = await this.fetchWithTimeout(this.evaluatePath(key, opts));
 
     if (!res.ok) {
       throw new Error(`Flag evaluation failed: ${res.status}`);
     }
 
     return res.json();
+  }
+
+  /** Build the evaluate URL path with optional userId query parameter. */
+  private evaluatePath(key: FlagKey, opts?: EvaluateOptions): string {
+    const base = `/api/v1/evaluate/${key}`;
+
+    if (opts?.userId) {
+      return `${base}?userId=${encodeURIComponent(opts.userId)}`;
+    }
+
+    return base;
   }
 
   private async fetchWithTimeout(path: string): Promise<Response> {
