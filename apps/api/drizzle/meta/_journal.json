@@ -36,6 +36,13 @@
       "when": 1775606400000,
       "tag": "0004_add_rollout_percentage",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775692800000,
+      "tag": "0005_add_flag_overrides",
+      "breakpoints": true
     }
   ]
 }

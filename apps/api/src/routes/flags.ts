@@ -5,6 +5,7 @@ import { flagKeyExists, flagNotFound } from "../errors.js";
 import { toFlagResponse } from "../mappers.js";
 import { flags } from "../schema.js";
 import { enqueueDeliveries } from "../delivery-service.js";
+import { invalidateAllEnvCaches } from "./overrides.js";
 import type { Db } from "../db.js";
 import type { Cache } from "../cache.js";
 
@@ -146,12 +147,8 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
         .where(eq(flags.key, request.params.key))
         .returning();
 
-      // Invalidate cache for this flag key after any update
-      if (fastify.cache) {
-        await fastify.cache
-          .del(`flag:${request.params.key}`)
-          .catch((err: Error) => fastify.log.warn({ err }, "Cache invalidation failed"));
-      }
+      // Invalidate cache for all environments (flag default change affects all)
+      await invalidateAllEnvCaches(fastify.cache, request.params.key, fastify.log);
 
       // Dispatch webhook deliveries when a flag is toggled
       if (request.body.enabled !== undefined) {
@@ -187,12 +184,8 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
         throw flagNotFound(request.params.key);
       }
 
-      // Invalidate cache after deletion
-      if (fastify.cache) {
-        await fastify.cache
-          .del(`flag:${request.params.key}`)
-          .catch((err: Error) => fastify.log.warn({ err }, "Cache invalidation failed"));
-      }
+      // Invalidate cache for all environments after deletion
+      await invalidateAllEnvCaches(fastify.cache, request.params.key, fastify.log);
 
       return reply.status(200).send({ deleted: true });
     },

@@ -1,4 +1,13 @@
-import { boolean, integer, pgTable, serial, text, timestamp, index } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  index,
+  unique,
+} from "drizzle-orm/pg-core";
 
 export const flags = pgTable("flags", {
   id: serial("id").primaryKey(),
@@ -11,6 +20,28 @@ export const flags = pgTable("flags", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ── Flag Overrides (per-environment) ────────────────────────────────────
+
+export const flagOverrides = pgTable(
+  "flag_overrides",
+  {
+    id: serial("id").primaryKey(),
+    flagId: integer("flag_id")
+      .notNull()
+      .references(() => flags.id, { onDelete: "cascade" }),
+    /** Environment key: dev | staging | production */
+    environment: text("environment").notNull(),
+    enabled: boolean("enabled").notNull(),
+    rolloutPercentage: integer("rollout_percentage").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("flag_overrides_flag_env_uq").on(table.flagId, table.environment),
+    index("flag_overrides_lookup_idx").on(table.flagId, table.environment),
+  ],
+);
 
 // ── Webhook Subscriptions ────────────────────────────────────────────────
 

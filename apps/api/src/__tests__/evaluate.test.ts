@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildServer } from "../index.js";
 import { createDb } from "../db.js";
-import { flags } from "../schema.js";
+import { flags, flagOverrides } from "../schema.js";
 
 const db = createDb(process.env.DATABASE_URL!);
 // Tests run without cache to validate a DB fallback path
@@ -15,6 +15,7 @@ beforeAll(async () => {
 afterAll(() => server.close());
 
 beforeEach(async () => {
+  await db.delete(flagOverrides);
   await db.delete(flags);
 });
 
@@ -43,6 +44,8 @@ describe("GET /api/v1/evaluate/:key", () => {
     expect(res.json().enabled).toBe(false);
     expect(res.json().reason).toBe("flag_disabled");
     expect(res.json().source).toBe("database");
+    expect(res.json().valueSource).toBe("default");
+    expect(res.json().environment).toBe("production");
   });
 
   it("returns enabled=true for an enabled flag with reason rollout_full", async () => {
@@ -56,6 +59,21 @@ describe("GET /api/v1/evaluate/:key", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(true);
     expect(res.json().reason).toBe("rollout_full");
+    expect(res.json().valueSource).toBe("default");
+  });
+
+  it("defaults to production environment when env not specified", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "env-test", name: "Env Test", enabled: true },
+    });
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/env-test",
+    });
+    expect(res.json().environment).toBe("production");
   });
 
   it("is accessible without API key (public endpoint)", async () => {
@@ -68,7 +86,6 @@ describe("GET /api/v1/evaluate/:key", () => {
     const res = await server.inject({
       method: "GET",
       url: "/api/v1/evaluate/public-check",
-      // No auth header
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().reason).toBe("rollout_full");
@@ -84,7 +101,6 @@ describe("GET /api/v1/evaluate/:key — percentage targeting", () => {
       payload: { key: "canary", name: "Canary", enabled: true, rolloutPercentage: 50 },
     });
 
-    // Evaluate with different userIds — at least one should match and one should miss
     const results: boolean[] = [];
     for (let i = 0; i < 20; i++) {
       const res = await server.inject({
@@ -97,7 +113,6 @@ describe("GET /api/v1/evaluate/:key — percentage targeting", () => {
       results.push(body.enabled);
     }
 
-    // At 50%, we expect a mix of true/false across 20 users
     expect(results).toContain(true);
     expect(results).toContain(false);
   });
@@ -157,5 +172,117 @@ describe("GET /api/v1/evaluate/:key — percentage targeting", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().enabled).toBe(false);
     expect(res.json().reason).toBe("flag_disabled");
+  });
+});
+
+describe("GET /api/v1/evaluate/:key — environment overrides", () => {
+  it("uses override when evaluating in overridden environment", async () => {
+    // Create flag enabled by default
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "new-checkout", name: "New Checkout", enabled: true },
+    });
+
+    // Override: disable on staging
+    await server.inject({
+      method: "PUT",
+      url: "/api/v1/flags/new-checkout/overrides/staging",
+      headers: authHeader,
+      payload: { enabled: false },
+    });
+
+    // Evaluate on production → default (enabled)
+    const prodRes = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/new-checkout?env=production",
+    });
+    expect(prodRes.json().enabled).toBe(true);
+    expect(prodRes.json().valueSource).toBe("default");
+    expect(prodRes.json().environment).toBe("production");
+
+    // Evaluate on staging → override (disabled)
+    const stagingRes = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/new-checkout?env=staging",
+    });
+    expect(stagingRes.json().enabled).toBe(false);
+    expect(stagingRes.json().valueSource).toBe("override");
+    expect(stagingRes.json().environment).toBe("staging");
+    expect(stagingRes.json().reason).toBe("flag_disabled");
+  });
+
+  it("falls back to flag default when no override exists for environment", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "fallback-test", name: "Fallback", enabled: true },
+    });
+
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/fallback-test?env=development",
+    });
+
+    expect(res.json().enabled).toBe(true);
+    expect(res.json().valueSource).toBe("default");
+    expect(res.json().environment).toBe("development");
+  });
+
+  it("override rolloutPercentage works with targeting", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "ab-test", name: "AB Test", enabled: true, rolloutPercentage: 100 },
+    });
+
+    // Override staging to 50% rollout
+    await server.inject({
+      method: "PUT",
+      url: "/api/v1/flags/ab-test/overrides/staging",
+      headers: authHeader,
+      payload: { enabled: true, rolloutPercentage: 50 },
+    });
+
+    // Production: 100% rollout → always enabled
+    const prodRes = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/ab-test?env=production&userId=user-1",
+    });
+    expect(prodRes.json().enabled).toBe(true);
+    expect(prodRes.json().reason).toBe("rollout_full");
+
+    // Staging: 50% rollout → mix of results
+    const results: boolean[] = [];
+    for (let i = 0; i < 20; i++) {
+      const res = await server.inject({
+        method: "GET",
+        url: `/api/v1/evaluate/ab-test?env=staging&userId=user-${i}`,
+      });
+      results.push(res.json().enabled);
+    }
+    expect(results).toContain(true);
+    expect(results).toContain(false);
+  });
+
+  it("treats invalid env as production (backward compatible)", async () => {
+    await server.inject({
+      method: "POST",
+      url: "/api/v1/flags",
+      headers: authHeader,
+      payload: { key: "bad-env", name: "Bad Env", enabled: true },
+    });
+
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/v1/evaluate/bad-env?env=nonexistent",
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().environment).toBe("production");
+    expect(res.json().valueSource).toBe("default");
   });
 });

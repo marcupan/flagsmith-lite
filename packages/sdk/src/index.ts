@@ -1,4 +1,4 @@
-import type { EvaluateResponse, FlagKey } from "@project/shared";
+import type { Environment, EvaluateResponse, FlagKey } from "@project/shared";
 
 /** Configuration for the FlagsmithClient. */
 export interface FlagsmithClientOptions {
@@ -10,10 +10,12 @@ export interface FlagsmithClientOptions {
   fetch?: typeof globalThis.fetch;
 }
 
-/** Options for flag evaluation with targeting context. */
+/** Options for flag evaluation with targeting and environment context. */
 export interface EvaluateOptions {
   /** User identifier for percentage-based targeting. */
   userId?: string;
+  /** Environment to evaluate in. Defaults to "production" on server. */
+  env?: Environment;
 }
 
 /**
@@ -85,15 +87,21 @@ export class FlagsmithClient {
     return res.json();
   }
 
-  /** Build the evaluate URL path with optional userId query parameter. */
+  /** Build the evaluate URL path with optional query parameters. */
   private evaluatePath(key: FlagKey, opts?: EvaluateOptions): string {
     const base = `/api/v1/evaluate/${key}`;
+    const params = new URLSearchParams();
 
     if (opts?.userId) {
-      return `${base}?userId=${encodeURIComponent(opts.userId)}`;
+      params.set("userId", opts.userId);
+    }
+    if (opts?.env) {
+      params.set("env", opts.env);
     }
 
-    return base;
+    const qs = params.toString();
+
+    return qs ? `${base}?${qs}` : base;
   }
 
   private async fetchWithTimeout(path: string): Promise<Response> {

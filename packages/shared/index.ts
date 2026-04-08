@@ -9,6 +9,17 @@ export { canTransition, transition, isTerminal, nextStates } from "./state-machi
 /** Current API version, returned by `/health` endpoint. */
 export const API_VERSION = "1.0.0";
 
+// ── Environments ───────────────────────────────────────────────────────
+
+/** Predefined environments — hardcoded union, no dynamic table. See ADR-003. */
+export const ENVIRONMENTS = ["development", "staging", "production"] as const;
+export type Environment = (typeof ENVIRONMENTS)[number];
+
+/** Runtime check: is a string a valid environment key? */
+export function isEnvironment(value: string): value is Environment {
+  return (ENVIRONMENTS as readonly string[]).includes(value);
+}
+
 // ── Branded type re-imports (used in interfaces below) ──────────────────
 import type { FlagKey, Timestamp } from "./branded.js";
 
@@ -84,6 +95,9 @@ export type EvaluateReason =
   | "no_user_id"
   | "rollout_full";
 
+/** Whether the evaluate result came from a per-environment override or the flag default. */
+export type EvaluateValueSource = "override" | "default";
+
 /** Response shape for `GET /api/v1/evaluate/:key`. */
 export interface EvaluateResponse {
   /** Flag key that was evaluated */
@@ -92,10 +106,31 @@ export interface EvaluateResponse {
   enabled: boolean;
   /** Why the flag resolved to this state */
   reason: EvaluateReason;
+  /** Which environment was evaluated (present when ?env= is provided) */
+  environment?: Environment;
+  /** Whether the value came from a per-env override or the flag default */
+  valueSource: EvaluateValueSource;
   /** ISO 8601 timestamp of evaluation */
   evaluatedAt: Timestamp;
   /** Where the value was resolved from — `"cache"` (Redis, 30s TTL) or `"database"` */
   source: "cache" | "database";
+}
+
+// ── Flag Overrides ─────────────────────────────────────────────────────
+
+/** Per-environment override as returned by the API. */
+export interface FlagOverride {
+  environment: Environment;
+  enabled: boolean;
+  rolloutPercentage: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+/** Request body for `PUT /api/v1/flags/:key/overrides/:env`. */
+export interface SetOverrideBody {
+  enabled: boolean;
+  rolloutPercentage?: number;
 }
 
 // ── Errors ──────────────────────────────────────────────────────────────
@@ -112,6 +147,8 @@ export const ErrorCodes = {
   UNAUTHORIZED: { status: 401, message: "Invalid or missing API key" },
   INTERNAL_ERROR: { status: 500, message: "Internal server error" },
   SERVICE_UNAVAILABLE: { status: 503, message: "Service unavailable" },
+  INVALID_ENVIRONMENT: { status: 400, message: "Invalid environment" },
+  OVERRIDE_NOT_FOUND: { status: 404, message: "Override not found for this environment" },
   WEBHOOK_NOT_FOUND: { status: 404, message: "Webhook subscription not found" },
   WEBHOOK_INVALID_URL: { status: 400, message: "Invalid webhook URL" },
   WEBHOOK_INVALID_EVENTS: { status: 400, message: "Invalid webhook event types" },

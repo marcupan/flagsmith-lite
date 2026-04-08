@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted (implemented in Phase 4.2)
 
 ## Context
 
@@ -31,10 +31,12 @@ Backward compatibility: `GET /api/v1/evaluate/:key` without `?env=` defaults to 
 
 The following is out of scope for Project 1:
 
-- Dynamic user-created environments (hardcoded `dev | staging | production` for now)
+- Dynamic user-created environments (hardcoded `development | staging | production` for now)
 - Typed flag values (JSONB overrides)
 - Environment-aware web dashboard
-- Percentage-based rollouts per environment
+
+**No longer deferred:** Percentage-based rollouts per environment — implemented as `rollout_percentage`
+column on `flag_overrides` table (Phase 4.1 + 4.2).
 
 ## Consequences
 
