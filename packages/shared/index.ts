@@ -133,6 +133,33 @@ export interface SetOverrideBody {
   rolloutPercentage?: number;
 }
 
+// ── Audit ──────────────────────────────────────────────────────────────
+
+/** Entity types tracked by the audit log. */
+export type AuditEntityType = "flag" | "override" | "subscription";
+
+/** Actions tracked by the audit log. */
+export type AuditAction = "created" | "updated" | "deleted";
+
+/** A single field change: before and after values. */
+export interface FieldChange {
+  from: unknown;
+  to: unknown;
+}
+
+/** Audit event as returned by the query API. */
+export interface AuditEvent {
+  id: number;
+  entityType: AuditEntityType;
+  entityKey: string;
+  action: AuditAction;
+  /** SHA-256 prefix (8 chars) of the API key */
+  actor: string;
+  changes: Record<string, FieldChange>;
+  metadata: Record<string, unknown>;
+  createdAt: Timestamp;
+}
+
 // ── Errors ──────────────────────────────────────────────────────────────
 
 /**

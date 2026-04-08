@@ -43,6 +43,13 @@
       "when": 1775692800000,
       "tag": "0005_add_flag_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775779200000,
+      "tag": "0006_add_audit_events",
+      "breakpoints": true
     }
   ]
 }

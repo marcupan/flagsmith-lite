@@ -6,6 +6,7 @@ import { toFlagResponse } from "../mappers.js";
 import { flags } from "../schema.js";
 import { enqueueDeliveries } from "../delivery-service.js";
 import { invalidateAllEnvCaches } from "./overrides.js";
+import { recordAudit, diffChanges, hashActor } from "../audit.js";
 import type { Db } from "../db.js";
 import type { Cache } from "../cache.js";
 
@@ -86,6 +87,29 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
         })
         .returning();
 
+      // Fire-and-forget: audit write failure never blocks the response
+      const apiKey = request.headers["x-api-key"] as string;
+      void recordAudit(
+        fastify.db,
+        {
+          entityType: "flag",
+          entityKey: row.key,
+          action: "created",
+          actor: hashActor(apiKey),
+          changes: diffChanges(
+            {},
+            {
+              key: row.key,
+              name: row.name,
+              enabled: row.enabled,
+              description: row.description,
+              rolloutPercentage: row.rolloutPercentage,
+            },
+          ),
+        },
+        request.log,
+      );
+
       return reply.status(201).send(toFlagResponse(row));
     },
   );
@@ -141,11 +165,44 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      // Snapshot before state for audit diff
+      const before = {
+        name: existing.name,
+        enabled: existing.enabled,
+        description: existing.description,
+        rolloutPercentage: existing.rolloutPercentage,
+      };
+
       const [row] = await fastify.db
         .update(flags)
         .set(updates)
         .where(eq(flags.key, request.params.key))
         .returning();
+
+      // Compute diff and record audit event (fire-and-forget)
+      const after = {
+        name: row.name,
+        enabled: row.enabled,
+        description: row.description,
+        rolloutPercentage: row.rolloutPercentage,
+      };
+      const changes = diffChanges(before, after);
+
+      if (Object.keys(changes).length > 0) {
+        const apiKey = request.headers["x-api-key"] as string;
+
+        void recordAudit(
+          fastify.db,
+          {
+            entityType: "flag",
+            entityKey: row.key,
+            action: "updated",
+            actor: hashActor(apiKey),
+            changes,
+          },
+          request.log,
+        );
+      }
 
       // Invalidate cache for all environments (flag default change affects all)
       await invalidateAllEnvCaches(fastify.cache, request.params.key, fastify.log);
@@ -183,6 +240,30 @@ export const flagsRoutes: FastifyPluginAsync = async (fastify) => {
       if (!deleted) {
         throw flagNotFound(request.params.key);
       }
+
+      // Record audit for deletion — diff is full object → empty
+      const apiKey = request.headers["x-api-key"] as string;
+
+      void recordAudit(
+        fastify.db,
+        {
+          entityType: "flag",
+          entityKey: deleted.key,
+          action: "deleted",
+          actor: hashActor(apiKey),
+          changes: diffChanges(
+            {
+              key: deleted.key,
+              name: deleted.name,
+              enabled: deleted.enabled,
+              description: deleted.description,
+              rolloutPercentage: deleted.rolloutPercentage,
+            },
+            {},
+          ),
+        },
+        request.log,
+      );
 
       // Invalidate cache for all environments after deletion
       await invalidateAllEnvCaches(fastify.cache, request.params.key, fastify.log);

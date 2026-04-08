@@ -77,6 +77,15 @@ export const circuitBreakerState = new Gauge({
   registers: [registry],
 });
 
+// ── Audit Event Metrics ────────────────────────────────────────────────
+
+export const auditEventsTotal = new Counter({
+  name: "audit_events_total",
+  help: "Total number of audit events recorded",
+  labelNames: ["entity_type", "action"] as const,
+  registers: [registry],
+});
+
 // ── Database Pool Metrics (Action item from Incident 001) ──────────────
 
 export const dbPoolMaxConnections = new Gauge({

@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgTable,
   serial,
   text,
@@ -96,4 +97,31 @@ export const deliveryTransitions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("idx_delivery_transitions_delivery_id").on(table.deliveryId)],
+);
+
+// ── Audit Events (append-only) ──────────────────────────────────────────
+
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: serial("id").primaryKey(),
+    /** What kind of entity changed: flag, override, subscription */
+    entityType: text("entity_type").notNull(),
+    /** Business key of the entity, e.g. flag key or subscription id */
+    entityKey: text("entity_key").notNull(),
+    /** What happened: created, updated, deleted */
+    action: text("action").notNull(),
+    /** SHA-256 prefix (8 chars) of the API key that performed the action */
+    actor: text("actor").notNull(),
+    /** Only the changed fields: { field: { from, to } } */
+    changes: jsonb("changes").notNull().default({}),
+    /** Extra context: environment, IP, correlation ID, etc. */
+    metadata: jsonb("metadata").notNull().default({}),
+    /** Immutable — no updatedAt column by design (append-only) */
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_audit_entity").on(table.entityType, table.entityKey),
+    index("idx_audit_timestamp").on(table.createdAt),
+  ],
 );

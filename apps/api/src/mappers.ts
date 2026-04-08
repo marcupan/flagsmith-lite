@@ -5,6 +5,10 @@
 import {
   FlagKey,
   Timestamp,
+  type AuditAction,
+  type AuditEntityType,
+  type AuditEvent,
+  type FieldChange,
   type Flag,
   type WebhookSubscription,
   type WebhookDelivery,
@@ -17,6 +21,7 @@ import type {
   webhookSubscriptions,
   webhookDeliveries,
   deliveryTransitions,
+  auditEvents,
 } from "./schema.js";
 
 /** DB row → API response. Brands key and converts Date → Timestamp. */
@@ -73,5 +78,19 @@ export function toTransitionResponse(
     to: row.toState as DeliveryState,
     reason: row.reason,
     timestamp: Timestamp(row.createdAt),
+  };
+}
+
+/** DB row → API response for audit event. */
+export function toAuditEventResponse(row: typeof auditEvents.$inferSelect): AuditEvent {
+  return {
+    id: row.id,
+    entityType: row.entityType as AuditEntityType,
+    entityKey: row.entityKey,
+    action: row.action as AuditAction,
+    actor: row.actor,
+    changes: row.changes as Record<string, FieldChange>,
+    metadata: row.metadata as Record<string, unknown>,
+    createdAt: Timestamp(row.createdAt),
   };
 }

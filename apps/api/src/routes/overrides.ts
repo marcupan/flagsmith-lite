@@ -10,6 +10,7 @@ import {
 import { appError, flagNotFound } from "../errors.js";
 import { flags, flagOverrides } from "../schema.js";
 import { ENVIRONMENTS } from "@project/shared";
+import { recordAudit, diffChanges, hashActor } from "../audit.js";
 import type { Db } from "../db.js";
 import type { Cache } from "../cache.js";
 
@@ -129,7 +130,14 @@ export const overridesRoutes: FastifyPluginAsync = async (fastify) => {
 
     let row: typeof flagOverrides.$inferSelect;
 
+    const apiKey = request.headers["x-api-key"] as string;
+
     if (existing) {
+      const before = {
+        enabled: existing.enabled,
+        rolloutPercentage: existing.rolloutPercentage,
+      };
+
       [row] = await fastify.db
         .update(flagOverrides)
         .set({
@@ -139,6 +147,24 @@ export const overridesRoutes: FastifyPluginAsync = async (fastify) => {
         })
         .where(eq(flagOverrides.id, existing.id))
         .returning();
+
+      const after = { enabled: row.enabled, rolloutPercentage: row.rolloutPercentage };
+      const changes = diffChanges(before, after);
+
+      if (Object.keys(changes).length > 0) {
+        void recordAudit(
+          fastify.db,
+          {
+            entityType: "override",
+            entityKey: key,
+            action: "updated",
+            actor: hashActor(apiKey),
+            changes,
+            metadata: { environment: env },
+          },
+          request.log,
+        );
+      }
     } else {
       [row] = await fastify.db
         .insert(flagOverrides)
@@ -149,6 +175,25 @@ export const overridesRoutes: FastifyPluginAsync = async (fastify) => {
           rolloutPercentage: request.body.rolloutPercentage ?? 100,
         })
         .returning();
+
+      void recordAudit(
+        fastify.db,
+        {
+          entityType: "override",
+          entityKey: key,
+          action: "created",
+          actor: hashActor(apiKey),
+          changes: diffChanges(
+            {},
+            {
+              enabled: row.enabled,
+              rolloutPercentage: row.rolloutPercentage,
+            },
+          ),
+          metadata: { environment: env },
+        },
+        request.log,
+      );
 
       void reply.status(201);
     }
@@ -185,6 +230,27 @@ export const overridesRoutes: FastifyPluginAsync = async (fastify) => {
     if (!deleted) {
       throw appError("OVERRIDE_NOT_FOUND", `No override for flag "${key}" in environment "${env}"`);
     }
+
+    const apiKey = request.headers["x-api-key"] as string;
+
+    void recordAudit(
+      fastify.db,
+      {
+        entityType: "override",
+        entityKey: key,
+        action: "deleted",
+        actor: hashActor(apiKey),
+        changes: diffChanges(
+          {
+            enabled: deleted.enabled,
+            rolloutPercentage: deleted.rolloutPercentage,
+          },
+          {},
+        ),
+        metadata: { environment: env },
+      },
+      request.log,
+    );
 
     await invalidateEnvCache(fastify.cache, key, env, fastify.log);
 

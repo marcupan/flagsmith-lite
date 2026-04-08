@@ -1,11 +1,16 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
 
-import type { DeliveryState, WebhookDelivery, DeliveryTransition } from "@project/shared";
+import type {
+  AuditEvent,
+  DeliveryState,
+  WebhookDelivery,
+  DeliveryTransition,
+} from "@project/shared";
 
-import { toDeliveryResponse, toTransitionResponse } from "../mappers.js";
-import { webhookDeliveries, deliveryTransitions } from "../schema.js";
+import { toAuditEventResponse, toDeliveryResponse, toTransitionResponse } from "../mappers.js";
+import { webhookDeliveries, deliveryTransitions, auditEvents } from "../schema.js";
 import type { Db } from "../db.js";
 
 /** States that can be replayed — only terminal or permanently failed. */
@@ -147,6 +152,81 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
       request.log.info({ deliveryId: id, oldCorrelationId, newCorrelationId }, "Delivery replayed");
 
       return reply.status(200).send(toDeliveryResponse(updated));
+    },
+  );
+
+  // ── Audit Log Query ───────────────────────────────────────────────────
+
+  const auditQuerySchema = {
+    querystring: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        entity_type: { type: "string" },
+        entity: { type: "string" },
+        action: { type: "string" },
+        actor: { type: "string" },
+        from: { type: "string", format: "date-time" },
+        to: { type: "string", format: "date-time" },
+        limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+        offset: { type: "integer", minimum: 0, default: 0 },
+      },
+    },
+  };
+
+  interface AuditQuery {
+    entity_type?: string;
+    entity?: string;
+    action?: string;
+    actor?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  }
+
+  // GET /admin/audit — query audit events with filtering and pagination
+  fastify.get<{ Querystring: AuditQuery; Reply: AuditEvent[] }>(
+    "/audit",
+    { schema: auditQuerySchema },
+    async (request) => {
+      const { entity_type, entity, action, actor, from, to } = request.query;
+      const limit = request.query.limit ?? 50;
+      const offset = request.query.offset ?? 0;
+
+      // Build dynamic WHERE conditions
+      const conditions = [];
+
+      if (entity_type) {
+        conditions.push(eq(auditEvents.entityType, entity_type));
+      }
+      if (entity) {
+        conditions.push(eq(auditEvents.entityKey, entity));
+      }
+      if (action) {
+        conditions.push(eq(auditEvents.action, action));
+      }
+      if (actor) {
+        conditions.push(eq(auditEvents.actor, actor));
+      }
+      if (from) {
+        conditions.push(gte(auditEvents.createdAt, new Date(from)));
+      }
+      if (to) {
+        conditions.push(lte(auditEvents.createdAt, new Date(to)));
+      }
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const rows = await fastify.db
+        .select()
+        .from(auditEvents)
+        .where(where)
+        .orderBy(desc(auditEvents.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      return rows.map(toAuditEventResponse);
     },
   );
 };
