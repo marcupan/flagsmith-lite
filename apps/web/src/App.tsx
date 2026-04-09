@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type SubmitEventHandler } from "react";
+
 import type { CreateFlagBody, Flag } from "@project/shared";
+
 import { createFlag, deleteFlag, listFlags, updateFlag } from "./api";
+import {
+  trackDashboardLoaded,
+  trackFlagCreated,
+  trackFlagDeleted,
+  trackFlagToggled,
+  trackPageViewed,
+} from "./analytics";
 
 type Status = "idle" | "loading" | "error";
 
@@ -15,8 +24,11 @@ export default function App() {
     setError(null);
 
     try {
-      setFlags(await listFlags());
+      const loaded = await listFlags();
+
+      setFlags(loaded);
       setStatus("idle");
+      trackDashboardLoaded(loaded.length);
     } catch (err) {
       setError((err as Error).message);
       setStatus("error");
@@ -24,6 +36,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    trackPageViewed(window.location.pathname);
     void load();
   }, [load]);
 
@@ -32,6 +45,7 @@ export default function App() {
       const updated = await updateFlag(flag.key, { enabled: !flag.enabled });
 
       setFlags((prev) => prev.map((f) => (f.key === flag.key ? updated : f)));
+      trackFlagToggled(updated.key, updated.enabled, updated.rolloutPercentage);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -46,6 +60,7 @@ export default function App() {
       await deleteFlag(key);
 
       setFlags((prev) => prev.filter((f) => f.key !== key));
+      trackFlagDeleted(key);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -128,6 +143,7 @@ export default function App() {
           onCreated={(flag) => {
             setFlags((prev) => [flag, ...prev]);
             setCreating(false);
+            trackFlagCreated(flag.key, flag.name);
           }}
           onCancel={() => setCreating(false)}
         />

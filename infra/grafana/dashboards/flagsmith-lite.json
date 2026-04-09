@@ -161,9 +161,55 @@
       }
     },
     {
+      "title": "Top 10 Flags by Evaluation Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (flag_key) (rate(flag_evaluations_by_key_total[5m])))",
+          "legendFormat": "{{ flag_key }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "title": "Flag Adoption Rate (enabled / total)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum by (flag_key) (rate(flag_evaluations_by_key_total{result=\"enabled\"}[5m])) / sum by (flag_key) (rate(flag_evaluations_by_key_total[5m])) * 100",
+          "legendFormat": "{{ flag_key }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "title": "Audit Events Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum by (entity_type, action) (rate(audit_events_total[5m]))",
+          "legendFormat": "{{ entity_type }}.{{ action }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
       "title": "SLO Burn Rate — Delivery Success",
       "type": "gauge",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
       "targets": [
         {
           "expr": "webhook_deliveries_total{state=\"delivered\"} / (webhook_deliveries_total{state=\"delivered\"} + webhook_deliveries_total{state=\"dead\"}) * 100",
@@ -189,7 +235,7 @@
     {
       "title": "SLO Burn Rate — API Latency",
       "type": "gauge",
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 32 },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
@@ -215,7 +261,7 @@
     {
       "title": "SLO Burn Rate — Error Rate",
       "type": "gauge",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 32 },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",

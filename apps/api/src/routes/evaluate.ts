@@ -12,7 +12,7 @@ import { flagNotFound } from "../errors.js";
 import { flags, flagOverrides } from "../schema.js";
 import type { Db } from "../db.js";
 import type { Cache } from "../cache.js";
-import { flagEvaluations } from "../metrics.js";
+import { flagEvaluations, flagEvaluationsByKey } from "../metrics.js";
 import { evaluateTargeting } from "../targeting.js";
 
 declare module "fastify" {
@@ -102,6 +102,12 @@ export const evaluateRoutes: FastifyPluginAsync = async (fastify) => {
                 userId,
               });
 
+              flagEvaluationsByKey.inc({
+                flag_key: flagKey,
+                result: result.enabled ? "enabled" : "disabled",
+                source: cached.valueSource,
+              });
+
               return {
                 key: flagKey,
                 enabled: result.enabled,
@@ -157,6 +163,12 @@ export const evaluateRoutes: FastifyPluginAsync = async (fastify) => {
         rolloutPercentage: resolvedRollout,
         flagKey,
         userId,
+      });
+
+      flagEvaluationsByKey.inc({
+        flag_key: flagKey,
+        result: result.enabled ? "enabled" : "disabled",
+        source: valueSource,
       });
 
       return {

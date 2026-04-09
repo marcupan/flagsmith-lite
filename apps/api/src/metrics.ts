@@ -43,6 +43,13 @@ export const flagEvaluations = new Counter({
   registers: [registry],
 });
 
+export const flagEvaluationsByKey = new Counter({
+  name: "flag_evaluations_by_key_total",
+  help: "Flag evaluations broken down by key, result, and source (product analytics)",
+  labelNames: ["flag_key", "result", "source"] as const,
+  registers: [registry],
+});
+
 // ── Webhook Delivery Metrics ────────────────────────────────────────────
 
 export const deliveriesTotal = new Counter({
