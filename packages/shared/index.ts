@@ -93,7 +93,10 @@ export type EvaluateReason =
   | "rollout_match"
   | "rollout_miss"
   | "no_user_id"
-  | "rollout_full";
+  | "rollout_full"
+  | "experiment_variant"
+  | "experiment_control"
+  | "experiment_holdout";
 
 /** Whether the evaluate result came from a per-environment override or the flag default. */
 export type EvaluateValueSource = "override" | "default";
@@ -114,6 +117,11 @@ export interface EvaluateResponse {
   evaluatedAt: Timestamp;
   /** Where the value was resolved from — `"cache"` (Redis, 30s TTL) or `"database"` */
   source: "cache" | "database";
+  /** Cohort assignment when a running experiment is attached to this flag */
+  experiment?: {
+    id: number;
+    cohort: ExperimentCohort;
+  };
 }
 
 // ── Flag Overrides ─────────────────────────────────────────────────────
@@ -136,7 +144,7 @@ export interface SetOverrideBody {
 // ── Audit ──────────────────────────────────────────────────────────────
 
 /** Entity types tracked by the audit log. */
-export type AuditEntityType = "flag" | "override" | "subscription";
+export type AuditEntityType = "flag" | "override" | "subscription" | "experiment";
 
 /** Actions tracked by the audit log. */
 export type AuditAction = "created" | "updated" | "deleted";
@@ -160,6 +168,84 @@ export interface AuditEvent {
   createdAt: Timestamp;
 }
 
+// ── Experiments ────────────────────────────────────────────────────────
+
+/** Experiment lifecycle state. */
+export type ExperimentStatus = "draft" | "running" | "concluded";
+
+/** Cohort a user was assigned to when a running experiment is active. */
+export type ExperimentCohort = "control" | "variant" | "holdout";
+
+/** Decision recorded when concluding an experiment. */
+export type ExperimentConclusion = "ship" | "rollback" | "inconclusive";
+
+/** Experiment as returned by the API. */
+export interface Experiment {
+  id: number;
+  flagKey: FlagKey;
+  name: string;
+  hypothesis: string;
+  status: ExperimentStatus;
+  /** Percentage of users assigned to the control cohort (0-100) */
+  controlPercentage: number;
+  /** Percentage of users assigned to the variant cohort (0-100) */
+  variantPercentage: number;
+  primaryMetric: string;
+  /** ISO 8601; set when status transitions to running */
+  startDate: Timestamp | null;
+  /** ISO 8601; set when status transitions to concluded */
+  endDate: Timestamp | null;
+  conclusion: ExperimentConclusion | null;
+  notes: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+/** Request body for `POST /api/v1/experiments`. */
+export interface CreateExperimentBody {
+  flagKey: string;
+  name: string;
+  hypothesis: string;
+  primaryMetric: string;
+  controlPercentage?: number;
+  variantPercentage?: number;
+  notes?: string;
+}
+
+/** Request body for `PUT /api/v1/experiments/:id` (draft only). */
+export interface UpdateExperimentBody {
+  name?: string;
+  hypothesis?: string;
+  primaryMetric?: string;
+  controlPercentage?: number;
+  variantPercentage?: number;
+  notes?: string;
+}
+
+/** Request body for `POST /api/v1/experiments/:id/conclude`. */
+export interface ConcludeExperimentBody {
+  conclusion: ExperimentConclusion;
+  notes?: string;
+}
+
+/** Aggregated cohort data returned by `GET /api/v1/experiments/:id/results`. */
+export interface ExperimentCohortResults {
+  /** Total evaluations that landed in this cohort (from Prometheus) */
+  evaluations: number;
+}
+
+/** Response shape for `GET /api/v1/experiments/:id/results`. */
+export interface ExperimentResultsResponse {
+  experimentId: number;
+  flagKey: FlagKey;
+  status: ExperimentStatus;
+  control: ExperimentCohortResults;
+  variant: ExperimentCohortResults;
+  holdout: ExperimentCohortResults;
+  /** Running duration in hours; null when the experiment hasn't started yet */
+  durationHours: number | null;
+}
+
 // ── Errors ──────────────────────────────────────────────────────────────
 
 /**
@@ -179,6 +265,19 @@ export const ErrorCodes = {
   WEBHOOK_NOT_FOUND: { status: 404, message: "Webhook subscription not found" },
   WEBHOOK_INVALID_URL: { status: 400, message: "Invalid webhook URL" },
   WEBHOOK_INVALID_EVENTS: { status: 400, message: "Invalid webhook event types" },
+  EXPERIMENT_NOT_FOUND: { status: 404, message: "Experiment not found" },
+  EXPERIMENT_INVALID_STATE: {
+    status: 409,
+    message: "Experiment cannot transition from its current state",
+  },
+  EXPERIMENT_FLAG_CONFLICT: {
+    status: 409,
+    message: "Flag already has another running experiment",
+  },
+  EXPERIMENT_INVALID_SPLIT: {
+    status: 400,
+    message: "control_percentage + variant_percentage must be between 0 and 100",
+  },
 } as const satisfies Record<string, { status: number; message: string }>;
 
 /** Machine-readable error codes returned by the API. */

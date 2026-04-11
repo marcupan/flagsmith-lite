@@ -99,6 +99,56 @@ export const deliveryTransitions = pgTable(
   (table) => [index("idx_delivery_transitions_delivery_id").on(table.deliveryId)],
 );
 
+// ── Experiments ─────────────────────────────────────────────────────────
+
+/**
+ * A/B experiment bound to a feature flag.
+ *
+ * Lifecycle: draft → running → concluded.
+ *   - draft:     only editable state; no cohort assignment yet
+ *   - running:   evaluate returns cohort (control|variant|holdout); immutable
+ *   - concluded: decision recorded; no further writes
+ *
+ * Invariant: at most one experiment per flag may be in "running" state.
+ * Enforced in service layer (`experiments.ts`), not by a partial unique
+ * index, because Postgres partial indexes over text values work but add
+ * migration overhead disproportionate to the learning value here.
+ */
+export const experiments = pgTable(
+  "experiments",
+  {
+    id: serial("id").primaryKey(),
+    /** References flags.key (business key, not surrogate id) */
+    flagKey: text("flag_key")
+      .notNull()
+      .references(() => flags.key, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    hypothesis: text("hypothesis").notNull(),
+    /** State machine: draft → running → concluded */
+    status: text("status").notNull().default("draft"),
+    /** Percentage of users in the control cohort (flag disabled) */
+    controlPercentage: integer("control_percentage").notNull().default(50),
+    /** Percentage of users in the variant cohort (flag enabled) */
+    variantPercentage: integer("variant_percentage").notNull().default(50),
+    /** Name of the primary success metric, e.g. "checkout_completed" */
+    primaryMetric: text("primary_metric").notNull(),
+    /** When the experiment transitioned to running */
+    startDate: timestamp("start_date", { withTimezone: true }),
+    /** When the experiment transitioned to concluded */
+    endDate: timestamp("end_date", { withTimezone: true }),
+    /** Final decision: ship | rollback | inconclusive */
+    conclusion: text("conclusion"),
+    /** Free-form notes captured throughout the experiment lifecycle */
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_experiments_flag_key").on(table.flagKey),
+    index("idx_experiments_status").on(table.status),
+  ],
+);
+
 // ── Audit Events (append-only) ──────────────────────────────────────────
 
 export const auditEvents = pgTable(

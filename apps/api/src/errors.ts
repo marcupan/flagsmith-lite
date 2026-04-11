@@ -31,3 +31,18 @@ export const webhookInvalidUrl = (url: string) =>
 
 export const webhookInvalidEvents = () =>
   appError("WEBHOOK_INVALID_EVENTS", "Events must contain only valid webhook event types");
+
+export const experimentNotFound = (id: number) =>
+  appError("EXPERIMENT_NOT_FOUND", `Experiment ${id} not found`);
+
+export const experimentInvalidState = (from: string, to: string) =>
+  appError("EXPERIMENT_INVALID_STATE", `Experiment cannot transition from "${from}" to "${to}"`);
+
+export const experimentFlagConflict = (flagKey: string) =>
+  appError("EXPERIMENT_FLAG_CONFLICT", `Flag "${flagKey}" already has another running experiment`);
+
+export const experimentInvalidSplit = () =>
+  appError(
+    "EXPERIMENT_INVALID_SPLIT",
+    "control_percentage + variant_percentage must be between 0 and 100",
+  );

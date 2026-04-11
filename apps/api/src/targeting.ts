@@ -37,6 +37,7 @@ export interface TargetingResult {
  */
 export function computeBucket(flagKey: string, userId: string): number {
   const hash = createHash("sha256").update(`${flagKey}:${userId}`).digest("hex");
+
   return parseInt(hash.substring(0, 8), 16) % 100;
 }
 

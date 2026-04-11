@@ -16,6 +16,7 @@ import { evaluateRoutes } from "./routes/evaluate.js";
 import { overridesRoutes } from "./routes/overrides.js";
 import { webhooksRoutes } from "./routes/webhooks.js";
 import { adminRoutes } from "./routes/admin.js";
+import { experimentsRoutes } from "./routes/experiments.js";
 import {
   registry,
   httpRequestDuration,
@@ -152,6 +153,7 @@ export async function buildServer(opts: BuildServerOptions) {
         await authed.register(overridesRoutes, { prefix: "/flags/:key/overrides" });
         await authed.register(webhooksRoutes, { prefix: "/webhooks" });
         await authed.register(adminRoutes, { prefix: "/admin" });
+        await authed.register(experimentsRoutes, { prefix: "/experiments" });
       });
     },
     { prefix: "/api/v1" },

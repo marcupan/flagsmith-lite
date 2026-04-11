@@ -84,6 +84,22 @@ export const circuitBreakerState = new Gauge({
   registers: [registry],
 });
 
+// ── Experiment Metrics ─────────────────────────────────────────────────
+
+/**
+ * Evaluations that landed in an experiment cohort.
+ *
+ * Cardinality note: labeled by experiment_id (not flag_key) to bound growth.
+ * Experiments are short-lived (weeks, not months) and typically <100 at once,
+ * so `experiment_id × cohort` stays well below the 10k-series guardrail.
+ */
+export const experimentEvaluations = new Counter({
+  name: "experiment_evaluations_total",
+  help: "Evaluations resolved via a running experiment, labeled by experiment and cohort",
+  labelNames: ["experiment_id", "cohort"] as const,
+  registers: [registry],
+});
+
 // ── Audit Event Metrics ────────────────────────────────────────────────
 
 export const auditEventsTotal = new Counter({

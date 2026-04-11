@@ -8,6 +8,9 @@ import {
   type AuditAction,
   type AuditEntityType,
   type AuditEvent,
+  type Experiment,
+  type ExperimentConclusion,
+  type ExperimentStatus,
   type FieldChange,
   type Flag,
   type WebhookSubscription,
@@ -22,6 +25,7 @@ import type {
   webhookDeliveries,
   deliveryTransitions,
   auditEvents,
+  experiments,
 } from "./schema.js";
 
 /** DB row → API response. Brands key and converts Date → Timestamp. */
@@ -78,6 +82,26 @@ export function toTransitionResponse(
     to: row.toState as DeliveryState,
     reason: row.reason,
     timestamp: Timestamp(row.createdAt),
+  };
+}
+
+/** DB row → API response for experiment. */
+export function toExperimentResponse(row: typeof experiments.$inferSelect): Experiment {
+  return {
+    id: row.id,
+    flagKey: FlagKey(row.flagKey),
+    name: row.name,
+    hypothesis: row.hypothesis,
+    status: row.status as ExperimentStatus,
+    controlPercentage: row.controlPercentage,
+    variantPercentage: row.variantPercentage,
+    primaryMetric: row.primaryMetric,
+    startDate: row.startDate ? Timestamp(row.startDate) : null,
+    endDate: row.endDate ? Timestamp(row.endDate) : null,
+    conclusion: (row.conclusion as ExperimentConclusion | null) ?? null,
+    notes: row.notes,
+    createdAt: Timestamp(row.createdAt),
+    updatedAt: Timestamp(row.updatedAt),
   };
 }
 

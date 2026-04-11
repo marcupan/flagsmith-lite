@@ -8,7 +8,7 @@
 ## Data Sources
 
 | Source     | Purpose                    | Location           |
-|------------|----------------------------|--------------------|
+| ---------- | -------------------------- | ------------------ |
 | Prometheus | System + evaluation counts | `/metrics`         |
 | PostHog    | User behavior in admin UI  | posthog.com cloud  |
 | Audit Log  | Change history             | `GET /admin/audit` |
@@ -60,7 +60,7 @@ count(sum by (flag_key) (increase(flag_evaluations_by_key_total[24h])) > 0)
 Post-process audit events by `createdAt` timestamp to build a matrix:
 
 | -   | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
-|-----|-----|-----|-----|-----|-----|-----|-----|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | 0h  | 0   | 0   | 0   | 0   | 0   | 0   | 0   |
 | 9h  | 12  | 8   | 15  | 7   | 3   | 0   | 0   |
 | 15h | 5   | 11  | 9   | 14  | 2   | 0   | 0   |
@@ -127,7 +127,7 @@ retention means the product isn't sticky.
 For each feature flag used as a campaign:
 
 | Metric                    | Query                                                                          |
-|---------------------------|--------------------------------------------------------------------------------|
+| ------------------------- | ------------------------------------------------------------------------------ |
 | Users who saw the feature | `sum(flag_evaluations_by_key_total{flag_key="campaign-x", result="enabled"})`  |
 | Users in control group    | `sum(flag_evaluations_by_key_total{flag_key="campaign-x", result="disabled"})` |
 | Conversion (target event) | PostHog: `flag_toggled` events with `key="campaign-x"`                         |
@@ -141,7 +141,7 @@ increase engagement?"
 ## Environment Variables
 
 | Variable            | Required | Default                   | Purpose                                      |
-|---------------------|----------|---------------------------|----------------------------------------------|
+| ------------------- | -------- | ------------------------- | -------------------------------------------- |
 | `VITE_POSTHOG_KEY`  | No       | —                         | PostHog project API key                      |
 | `VITE_POSTHOG_HOST` | No       | `https://app.posthog.com` | PostHog API host (self-hosted)               |
 | `VITE_GA4_ID`       | No       | —                         | Google Analytics 4 measurement ID (optional) |
